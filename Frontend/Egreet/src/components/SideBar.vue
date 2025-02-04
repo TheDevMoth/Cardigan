@@ -1,5 +1,6 @@
 <template>
     <div :class="['sidebar', { expanded: isExpanded }]">
+        <button class="collapseButton" :onclick="retractSidebar"><i class="bi bi-arrow-left" style="font-size: 1.5rem; color: #161A1D"/></button>
         <div class="content">
             <slot></slot>
         </div>
@@ -17,6 +18,8 @@ function expandSidebar() {
     isExpanded.value = true;
 }
 function retractSidebar() {
+    console.log("ret");
+    
     isExpanded.value = false;
 }
 
@@ -51,5 +54,13 @@ defineExpose({
 
 .content {
     padding: 10px;
+}
+
+.collapseButton {
+    border: 0px;
+    background-color: transparent;
+    position: absolute;
+    right: 16px;
+    top: 10px
 }
 </style>

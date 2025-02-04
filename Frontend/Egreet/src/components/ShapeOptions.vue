@@ -1,7 +1,8 @@
 <template>
     <div class="p-4 bg-gray-100 rounded-lg shadow-md const-width">
-        <h3 class="text-lg font-semibold mb-3">{{ shapeType }} Properties</h3>
-        <form @input="updateShape" @keydown.enter.prevent="">
+        <h3 class="text-lg mb-3">{{ shapeType }} Properties</h3>
+
+        <form @input="updateShape" @keydown.enter.prevent>
             <div class="container px-0">
                 <div class="row gy-2 gx-4">
                     <div v-if="hasProperty('fill')" class="col-md-6">
@@ -22,7 +23,7 @@
                     </div>
                     <div v-if="hasProperty('text')" class="col-12">
                         <label class="form-label">Text:</label>
-                        <textarea v-model="text" class="form-control" rows="3"></textarea>
+                        <textarea v-model="text" class="form-control" rows="3" @keydown.enter.stop></textarea>
                     </div>
                     <div v-if="hasProperty('fontSize')" class="col-md-6">
                         <label class="form-label">Font Size:</label>
@@ -35,6 +36,7 @@
                             <option value="Times New Roman">Times New Roman</option>
                             <option value="Verdana">Verdana</option>
                             <option value="Courier New">Courier New</option>
+                            <option value="Courier New">Calibri</option>
                         </select>
                     </div>
                     <div v-if="hasProperty('numPoints')" class="col-md-6">
@@ -49,6 +51,10 @@
                         <label class="form-label">Outer Radius:</label>
                         <input v-model.number="outerRadius" type="number" min="0" class="form-control" />
                     </div>
+                    <div class="col-md-6">
+                        <label class="form-label">z-index:</label>
+                        <input v-model.number="zIndex" type="number" min="0" class="form-control" />
+                    </div>
                     <div class="col-12">
                         <button @click="$emit('delete')" class="mt-2 btn btn-danger w-100">Delete</button>
                     </div>
@@ -59,7 +65,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, defineProps, defineEmits, computed } from 'vue';
+import { ref, watch, computed } from 'vue';
 import Konva from 'konva';
 
 const props = defineProps<{ shape: Konva.Shape }>();
@@ -87,8 +93,18 @@ const fontFamily = ref((props.shape as Konva.Text).fontFamily?.() || 'Arial');
 const numPoints = ref((props.shape as Konva.Star).numPoints?.() || 5);
 const innerRadius = ref((props.shape as Konva.Star).innerRadius?.() || 10);
 const outerRadius = ref((props.shape as Konva.Star).outerRadius?.() || 20);
+const zIndex = ref(props.shape.getZIndex() || 0);
 
 const updateShape = () => {
+    if (!props.shape) return;
+    zIndex.value = clamp(zIndex.value, 0, props.shape.getLayer()!.children.length-2);
+    opacity.value = clamp(opacity.value, 0, 1);
+    fontSize.value = clamp(fontSize.value, 1, 100);
+    numPoints.value = clamp(numPoints.value, 1, 32);
+    innerRadius.value = clamp(innerRadius.value, 0, 100);
+    outerRadius.value = clamp(outerRadius.value, 0, 100);
+    strokeWidth.value = clamp(strokeWidth.value, 0, 100);
+
     if (hasProperty('fill')) props.shape.fill(fill.value);
     if (hasProperty('stroke')) props.shape.stroke(stroke.value);
     if (hasProperty('strokeWidth')) props.shape.strokeWidth(strokeWidth.value);
@@ -99,10 +115,11 @@ const updateShape = () => {
     if (hasProperty('numPoints')) (props.shape as Konva.Star).numPoints(numPoints.value);
     if (hasProperty('innerRadius')) (props.shape as Konva.Star).innerRadius(innerRadius.value);
     if (hasProperty('outerRadius')) (props.shape as Konva.Star).outerRadius(outerRadius.value);
+    props.shape.setZIndex(zIndex.value);
     props.shape.getLayer()?.batchDraw();
 };
 
-watch([fill, stroke, strokeWidth, opacity, text, fontSize, fontFamily, numPoints, innerRadius, outerRadius], () => {
+watch([fill, stroke, strokeWidth, opacity, text, fontSize, fontFamily, numPoints, innerRadius, outerRadius, zIndex], () => {
     updateShape();
 });
 
@@ -118,6 +135,10 @@ watch(() => props.shape, (newShape) => {
     innerRadius.value = (newShape as Konva.Star).innerRadius?.() || 10;
     outerRadius.value = (newShape as Konva.Star).outerRadius?.() || 20;
 }, { deep: true });
+
+function clamp(value: number, min: number, max: number): number {
+    return Math.min(Math.max(min, value), max);
+}
 </script>
 
 <style scoped>

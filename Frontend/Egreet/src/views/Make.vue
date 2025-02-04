@@ -1,6 +1,30 @@
 <template>
     <header>
-        <NavigationBar />
+        <NavigationBar>
+            <template #middle>
+                <div class="btn-group" role="group">                    
+                    <button type="button" class="btn me-3 align-items-center d-flex py-0" @click="addText">
+                        <i class="bi bi-textarea-t px-2 my-0" style="font-size: 1.5rem"/>
+                        <span>Add Text</span>
+                    </button>
+                    <button type="button" class="btn me-3 align-items-center d-flex py-0" @click="openShapesSidebar">
+                        <i class="bi bi-plus-square-dotted px-2 my-0" style="font-size: 1.5rem"/>
+                        <span>Add Shape</span>
+                    </button>
+                    <!-- <button type="button" class="btn me-3 align-items-center d-flex py-0" @click="openStickerSidebar">
+                        <i class="bi bi-sticky px-2 my-0" style="font-size: 1.5rem"/>
+                        <span>Add Sticker</span>
+                    </button> -->
+                    <button type="button" class="btn align-items-center d-flex py-0" @click="addImage">
+                        <i class="bi bi-image px-2 my-0" style="font-size: 1.5rem"/>
+                        <span>Add Image</span>
+                    </button>
+                </div>
+            </template>
+            <template #end>
+                ho
+            </template>
+        </NavigationBar>
     </header>
 
     <div style="position:relative">
@@ -18,14 +42,15 @@ import { createVNode, onMounted, ref, render } from 'vue';
 import NavigationBar from '@/components/NavigationBar.vue';
 import SideBar from '@/components/SideBar.vue';
 import ShapeOptions from '@/components/ShapeOptions.vue';
+import ShapeCreate from '@/components/ShapeCreate.vue';
 import Konva from 'konva';
 
 function clamp(value: number, min: number, max: number): number {
     return Math.min(Math.max(min, value), max);
 }
-function openSidebar(selectedItem: any) {
+function openOptionsSidebar(selectedItem: any) {
     if (!(selectedItem instanceof Konva.Shape)) {
-        console.error("You somehow selected a non Knova shape");
+        console.error("You some how selected a non Knova shape");
         return;
     }
     const shapeOptionsVNode = createVNode(ShapeOptions, { shape: selectedItem });
@@ -39,7 +64,7 @@ function openSidebar(selectedItem: any) {
         render(shapeOptionsVNode, sidebarSlot.value);
     } else console.error("sidebar slot is not there");
 
-    sidebar.value?.expandSidebar()
+    sidebar.value?.expandSidebar();
 }
 function closeSidebar() {
     sidebar.value?.retractSidebar();
@@ -67,7 +92,55 @@ function addNode(node: Konva.Shape) {
         node.y(clamp(node.y(), 0, stage.height()));
     });
     layer.add(node);
+    openOptionsSidebar(node);
+    node.setDraggable(true);
+    tr.nodes().forEach(element => {
+        element.setDraggable(false);
+    });
+    tr.nodes([node]);
+    tr.resizeEnabled(!(node instanceof Konva.Text));
+    tr.setZIndex(layer.children.length - 1);
 }
+function addText() {
+    var text = new Konva.Text({
+        text: 'Sample Text',
+        fontSize: 30,
+        fontFamily: 'Calibri',
+        fill: '#000000',
+    });
+    addNode(text);
+}
+function openShapesSidebar() {
+    const shapeCreateVNode = createVNode(ShapeCreate);
+
+    shapeCreateVNode.props = {
+        onShapeSelected: addNode
+    };
+
+    if (sidebarSlot.value) {
+        render(shapeCreateVNode, sidebarSlot.value);
+    } else console.error("sidebar slot is not there");
+
+    sidebar.value?.expandSidebar()
+}
+// function openStickerSidebar() {
+//     // Todo
+//     // const shapeCreateVNode = createVNode(ShapeCreate);
+
+//     // shapeCreateVNode.props = {
+//     //     onShapeSelected: addNode
+//     // };
+
+//     // if (sidebarSlot.value) {
+//     //     render(shapeCreateVNode, sidebarSlot.value);
+//     // } else console.error("sidebar slot is not there");
+
+//     // sidebar.value?.expandSidebar()
+// }
+function addImage() {
+    
+}
+
 
 const sidebar = ref<typeof SideBar | null>(null);
 const sidebarSlot = ref<HTMLElement | null>(null);
@@ -86,7 +159,7 @@ onMounted(() => {
 
     tr = new Konva.Transformer();
     tr.flipEnabled(true);
-    console.log(tr.rotationSnaps([0, 45, 90, 135, 180, 225, 270, 315]));
+    tr.rotationSnaps([0, 45, 90, 135, 180, 225, 270, 315]);
     tr.rotationSnapTolerance(3);
 
     layer.add(tr);
@@ -100,6 +173,7 @@ onMounted(() => {
             });
             closeSidebar();
             tr.nodes([]);
+            tr.resizeEnabled(true);
             return;
         }
         // do nothing if clicked NOT on our rectangles
@@ -111,21 +185,28 @@ onMounted(() => {
         const isSelected = tr.nodes().indexOf(e.target) >= 0;
 
         if (!metaPressed && !isSelected) {
-            openSidebar(e.target);
+            openOptionsSidebar(e.target);
             e.target.setDraggable(true);
+            tr.nodes().forEach(element => {
+                element.setDraggable(false);
+            });
             tr.nodes([e.target]);
+            tr.resizeEnabled(!(e.target instanceof Konva.Text));
+            
         } else if (metaPressed && isSelected) {
             const nodes = tr.nodes().slice();
             nodes.splice(nodes.indexOf(e.target), 1);
             if (nodes.length == 0) closeSidebar();
             e.target.setDraggable(false);
             tr.nodes(nodes);
+            tr.resizeEnabled(!nodes.some(node => node instanceof Konva.Text));
         } else if (metaPressed && !isSelected) {
             e.target.setDraggable(true);
             const nodes = tr.nodes().concat([e.target]);
-            if (nodes.length == 1) openSidebar(e.target);
+            if (nodes.length == 1) openOptionsSidebar(e.target);
             else closeSidebar();
             tr.nodes(nodes);
+            if (e.target instanceof Konva.Text) tr.resizeEnabled(false);
         }
     });
 
@@ -158,10 +239,6 @@ onMounted(() => {
     layer.draw();
     tr.setZIndex(layer.children.length - 1);
 });
-
-
-
-
 </script>
 
 <style scoped>
@@ -176,6 +253,6 @@ onMounted(() => {
 
 #canvas-container {
     background-color: #FFFFFF;
-    margin: 30px;
 }
+
 </style>
