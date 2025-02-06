@@ -93,7 +93,7 @@ const fontFamily = ref((props.shape as Konva.Text).fontFamily?.() || 'Arial');
 const numPoints = ref((props.shape as Konva.Star).numPoints?.() || 5);
 const innerRadius = ref((props.shape as Konva.Star).innerRadius?.() || 10);
 const outerRadius = ref((props.shape as Konva.Star).outerRadius?.() || 20);
-const zIndex = ref(props.shape.getZIndex() || 0);
+const zIndex = ref(props.shape.getZIndex());
 
 const updateShape = () => {
     if (!props.shape) return;

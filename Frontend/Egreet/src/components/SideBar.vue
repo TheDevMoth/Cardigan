@@ -18,8 +18,6 @@ function expandSidebar() {
     isExpanded.value = true;
 }
 function retractSidebar() {
-    console.log("ret");
-    
     isExpanded.value = false;
 }
 

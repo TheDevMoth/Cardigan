@@ -15,10 +15,11 @@
                         <i class="bi bi-sticky px-2 my-0" style="font-size: 1.5rem"/>
                         <span>Add Sticker</span>
                     </button> -->
-                    <button type="button" class="btn align-items-center d-flex py-0" @click="addImage">
+                    <button type="button" class="btn align-items-center d-flex py-0" @click="fileInput?.click()">
                         <i class="bi bi-image px-2 my-0" style="font-size: 1.5rem"/>
                         <span>Add Image</span>
                     </button>
+                    <input type="file" ref="fileInput" @change="handleFileUpload" style="display: none;" accept="image/*" />
                 </div>
             </template>
             <template #end>
@@ -28,8 +29,8 @@
     </header>
 
     <div style="position:relative">
-        <main class="main-container">
-            <div id="canvas-container"></div>
+        <main class="main-container" ref="main-container">
+            <div id="canvas-container" ref="canvas-container"></div>
         </main>
         <SideBar ref="sidebar">
             <div ref="sidebarSlot"></div>
@@ -38,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { createVNode, onMounted, ref, render } from 'vue';
+import { createVNode, onMounted, ref, render, useTemplateRef } from 'vue';
 import NavigationBar from '@/components/NavigationBar.vue';
 import SideBar from '@/components/SideBar.vue';
 import ShapeOptions from '@/components/ShapeOptions.vue';
@@ -48,7 +49,59 @@ import Konva from 'konva';
 function clamp(value: number, min: number, max: number): number {
     return Math.min(Math.max(min, value), max);
 }
+function handleFileUpload(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const img = new Image();
+            img.onload = function () {
+                addImage(img);
+                // Clear the input value to allow the same file to be selected again
+                if (input) input.value = '';
+            };
+            img.onerror = function() {
+                console.error('Error loading image');
+                if (input) input.value = '';
+            };
+            img.src = e.target?.result as string;
+        };
+        reader.onerror = function() {
+            console.error('Error reading file');
+            if (input) input.value = '';
+        };
+        reader.readAsDataURL(file);
+    }
+}
+function addImage(img: HTMLImageElement) {
+    const landscape = img.width > img.height;
+    const maxWidth = Math.min(img.width, stage.width());
+    const maxHeight = Math.min(img.height, stage.height());
+    const scaleX = maxWidth / img.width;
+    const scaleY = maxHeight / img.height;
+    const scale = Math.min(scaleX, scaleY);
+
+    const imageNode = new Konva.Image({
+        image: img,
+        width: img.width * scale,
+        height: img.height * scale,
+    });
+    
+    var newScale = 1;
+    if (imageNode.width() > stage.width()/2 && landscape) {
+        newScale = (stage.width()/2)/imageNode.width();
+    } else if (imageNode.height() > stage.height()/2 && !landscape) {
+        newScale = (stage.height()/2)/imageNode.height();
+    }
+    imageNode.scaleY(newScale);
+    imageNode.scaleX(newScale);
+    addNode(imageNode);
+}
 function openOptionsSidebar(selectedItem: any) {
+    if (sidebarSlot.value && sidebarSlot.value.hasChildNodes()) {
+        render(null, sidebarSlot.value);
+    }
     if (!(selectedItem instanceof Konva.Shape)) {
         console.error("You some how selected a non Knova shape");
         return;
@@ -137,23 +190,33 @@ function openShapesSidebar() {
 
 //     // sidebar.value?.expandSidebar()
 // }
-function addImage() {
-    
-}
 
-
-const sidebar = ref<typeof SideBar | null>(null);
-const sidebarSlot = ref<HTMLElement | null>(null);
+const fileInput = useTemplateRef("fileInput");
+const canvasContainer = useTemplateRef("canvas-container");
+const sidebar = useTemplateRef("sidebar");
+const sidebarSlot = useTemplateRef("sidebarSlot");
+const mainContainer = useTemplateRef("main-container");
 var tr: Konva.Transformer;
 var stage: Konva.Stage;
 var layer: Konva.Layer;
 
 onMounted(() => {
+    var sceneWidth = 1018;
+    var sceneHeight = 720;
     stage = new Konva.Stage({
         container: 'canvas-container',
-        width: Math.min(1000, window.innerWidth * 0.9),
-        height: Math.min(707, window.innerWidth * 0.9 * 0.6)
+        width: Math.min(sceneWidth),
+        height: Math.min(sceneWidth)
     });
+    const bgLayer = new Konva.Layer();
+    bgLayer.add(new Konva.Rect({
+        fill: '#FFFFFF',
+        x: 0,
+        y: 0,
+        width: sceneWidth,
+        height: sceneHeight
+    }))
+    stage.add(bgLayer);
     layer = new Konva.Layer();
     stage.add(layer);
 
@@ -167,7 +230,7 @@ onMounted(() => {
     // selection handling 
     stage.on('click tap', function (e) {
         // Remove all selections
-        if (e.target === stage) {
+        if (e.target === stage || e.target.getLayer() === bgLayer) {
             tr.nodes().forEach(element => {
                 element.setDraggable(false);
             });
@@ -176,7 +239,6 @@ onMounted(() => {
             tr.resizeEnabled(true);
             return;
         }
-        // do nothing if clicked NOT on our rectangles
         if (e.target.getLayer() !== layer) {
             return;
         }
@@ -210,31 +272,25 @@ onMounted(() => {
         }
     });
 
-    var circle = new Konva.Circle({
-        radius: 50,
-        fill: 'red',
-        stroke: 'black',
-        strokeWidth: 4,
-    });
-    addNode(circle);
+    function fitStageIntoParentContainer() {
+        if (!mainContainer.value) return;
+        var container = mainContainer.value;
 
-    var text = new Konva.Text({
-        text: 'Simple Text',
-        fontSize: 30,
-        fontFamily: 'Calibri',
-        fill: 'green',
-    });
-    addNode(text);
+        var containerWidth = container.offsetWidth;
+        var containerHeight = container.offsetHeight;
 
-    var star = new Konva.Star({
-        numPoints: 5,
-        innerRadius: 70,
-        outerRadius: 70,
-        fill: 'yellow',
-        stroke: 'black',
-        strokeWidth: 4,
-    });
-    addNode(star);
+        var scaleX = containerWidth / sceneWidth;
+        var scaleY = containerHeight / sceneHeight;
+        
+        var scale = Math.min(scaleX, scaleY, 1);
+        
+        stage.width(sceneWidth * scale);
+        stage.height(sceneHeight * scale);
+        stage.scale({ x: scale, y: scale });
+    }
+
+      fitStageIntoParentContainer();
+      window.addEventListener('resize', fitStageIntoParentContainer);
 
     layer.draw();
     tr.setZIndex(layer.children.length - 1);
@@ -244,15 +300,17 @@ onMounted(() => {
 <style scoped>
 .main-container {
     background-color: #F5F3F4;
+    width: 100%;
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
-    width: 100%;
+    min-height: 100vh; 
+    padding: 20px; 
 }
 
 #canvas-container {
-    background-color: #FFFFFF;
+    margin: 0px;
+    padding: 0px;
+    overflow: hidden;
 }
-
 </style>
