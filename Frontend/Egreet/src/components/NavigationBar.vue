@@ -77,4 +77,7 @@ watch(breakpoint, (newVal) => {
     color: #BA181B;
     /* font-weight: 500; */
 }
+.navbar-bg {
+    background-color: #FFFFFF;
+}
 </style>

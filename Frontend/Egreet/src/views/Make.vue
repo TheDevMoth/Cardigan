@@ -1,45 +1,61 @@
 <template>
-    <header>
-        <NavigationBar>
-            <template #middle>
-                <div class="btn-group" role="group">                    
-                    <button type="button" class="btn me-3 align-items-center d-flex py-0" @click="addText">
-                        <i class="bi bi-textarea-t px-2 my-0" style="font-size: 1.5rem"/>
-                        <span>Add Text</span>
-                    </button>
-                    <button type="button" class="btn me-3 align-items-center d-flex py-0" @click="openShapesSidebar">
-                        <i class="bi bi-plus-square-dotted px-2 my-0" style="font-size: 1.5rem"/>
-                        <span>Add Shape</span>
-                    </button>
-                    <!-- <button type="button" class="btn me-3 align-items-center d-flex py-0" @click="openStickerSidebar">
-                        <i class="bi bi-sticky px-2 my-0" style="font-size: 1.5rem"/>
-                        <span>Add Sticker</span>
-                    </button> -->
-                    <button type="button" class="btn align-items-center d-flex py-0" @click="fileInput?.click()">
-                        <i class="bi bi-image px-2 my-0" style="font-size: 1.5rem"/>
-                        <span>Add Image</span>
-                    </button>
-                    <input type="file" ref="fileInput" @change="handleFileUpload" style="display: none;" accept="image/*" />
-                </div>
-            </template>
-            <template #end>
-                ho
-            </template>
-        </NavigationBar>
-    </header>
-
-    <div style="position:relative">
-        <main class="main-container" ref="main-container">
-            <div id="canvas-container" ref="canvas-container"></div>
-        </main>
-        <SideBar ref="sidebar">
-            <div ref="sidebarSlot"></div>
-        </SideBar>
+    <div class="screen">
+        <header>
+            <NavigationBar>
+                <template #middle>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn me-3 align-items-center d-flex py-0" @click="addText">
+                            <i class="bi bi-textarea-t px-2 my-0" style="font-size: 1.5rem"/>
+                            <span>Add Text</span>
+                        </button>
+                        <button type="button" class="btn me-3 align-items-center d-flex py-0" @click="openShapesSidebar">
+                            <i class="bi bi-plus-square-dotted px-2 my-0" style="font-size: 1.5rem"/>
+                            <span>Add Shape</span>
+                        </button>
+                        <!-- <button type="button" class="btn me-3 align-items-center d-flex py-0" @click="openStickerSidebar">
+                            <i class="bi bi-sticky px-2 my-0" style="font-size: 1.5rem"/>
+                            <span>Add Sticker</span>
+                        </button> -->
+                        <button type="button" class="btn align-items-center d-flex py-0" @click="fileInput?.click()">
+                            <i class="bi bi-image px-2 my-0" style="font-size: 1.5rem"/>
+                            <span>Add Image</span>
+                        </button>
+                        <input type="file" ref="fileInput" @change="handleFileUpload" style="display: none;" accept="image/*" />
+                    </div>
+                </template>
+                <template #end>
+                    ho
+                </template>
+            </NavigationBar>
+        </header>
+        <div style="position:relative">
+            <main class="main-container" ref="main-container">
+                <div :style="{ display: currentPage === 'front' ? 'block' : 'none' }" class="canvas-container" id="canvas-container-front" ref="canvas-container-front"></div>
+                <div :style="{ display: currentPage === 'inside' ? 'block' : 'none' }" class="canvas-container" id="canvas-container-inside" ref="canvas-container-inside"></div>
+                <div :style="{ display: currentPage === 'back' ? 'block' : 'none' }" class="canvas-container" id="canvas-container-back" ref="canvas-container-back"></div>
+            </main>
+            <SideBar ref="sidebar">
+                <div ref="sidebarSlot"></div>
+            </SideBar>
+        </div>
+        <footer>
+            <div class="btn-group" role="group">
+                <button @click="switchPage('front')" :class="{ active: currentPage === 'front' }">
+                    <div style="transform: scale(1.5, 2.5)"><i class="bi bi-wallet2 px-2 my-0"/></div>
+                </button>
+                <button @click="switchPage('inside')" :class="{ active: currentPage === 'inside' }">
+                    <div style="transform: scale(2.5, 3)"><i class="bi bi-postcard px-2 my-0"/></div>
+                </button>
+                <button @click="switchPage('back')" :class="{ active: currentPage === 'back' }">
+                    <div style="transform: scale(-1.5, 2.5)"><i class="bi bi-wallet2 px-2 my-0"/></div>
+                </button>
+            </div>
+        </footer>
     </div>
 </template>
 
 <script setup lang="ts">
-import { createVNode, onMounted, ref, render, useTemplateRef } from 'vue';
+import { createVNode, nextTick, onMounted, ref, render, useTemplateRef } from 'vue';
 import NavigationBar from '@/components/NavigationBar.vue';
 import SideBar from '@/components/SideBar.vue';
 import ShapeOptions from '@/components/ShapeOptions.vue';
@@ -58,7 +74,6 @@ function handleFileUpload(event: Event) {
             const img = new Image();
             img.onload = function () {
                 addImage(img);
-                // Clear the input value to allow the same file to be selected again
                 if (input) input.value = '';
             };
             img.onerror = function() {
@@ -76,8 +91,8 @@ function handleFileUpload(event: Event) {
 }
 function addImage(img: HTMLImageElement) {
     const landscape = img.width > img.height;
-    const maxWidth = Math.min(img.width, stage.width());
-    const maxHeight = Math.min(img.height, stage.height());
+    const maxWidth = Math.min(img.width, pageSizes[currentPage.value].width);
+    const maxHeight = Math.min(img.height, pageSizes[currentPage.value].height);
     const scaleX = maxWidth / img.width;
     const scaleY = maxHeight / img.height;
     const scale = Math.min(scaleX, scaleY);
@@ -89,10 +104,10 @@ function addImage(img: HTMLImageElement) {
     });
     
     var newScale = 1;
-    if (imageNode.width() > stage.width()/2 && landscape) {
-        newScale = (stage.width()/2)/imageNode.width();
-    } else if (imageNode.height() > stage.height()/2 && !landscape) {
-        newScale = (stage.height()/2)/imageNode.height();
+    if (imageNode.width() > stage.width() / stage.scaleX() /2 && landscape) {
+        newScale = (stage.width() / stage.scaleX() /2)/imageNode.width();
+    } else if (imageNode.height() > stage.height() / stage.scaleY() / 2 && !landscape) {
+        newScale = (stage.height()/stage.scaleY()/2)/imageNode.height();
     }
     imageNode.scaleY(newScale);
     imageNode.scaleX(newScale);
@@ -132,8 +147,8 @@ function deleteSelected() {
     layer.batchDraw();
 }
 function addNode(node: Konva.Shape) {
-    node.x(stage.width() / 2);
-    node.y(stage.height() / 2);
+    node.x(stage.width() / stage.scaleX() / 2);
+    node.y(stage.height() / stage.scaleY() / 2);
     node.on('mouseover', function () {
         document.body.style.cursor = 'pointer';
     });
@@ -141,8 +156,8 @@ function addNode(node: Konva.Shape) {
         document.body.style.cursor = 'default';
     });
     node.on('dragmove', () => {
-        node.x(clamp(node.x(), 0, stage.width()));
-        node.y(clamp(node.y(), 0, stage.height()));
+        node.x(clamp(node.x(), -node.width(), stage.width() / stage.scaleX()));
+        node.y(clamp(node.y(), -node.height(), stage.height() / stage.scaleY()));
     });
     layer.add(node);
     openOptionsSidebar(node);
@@ -176,67 +191,49 @@ function openShapesSidebar() {
 
     sidebar.value?.expandSidebar()
 }
-// function openStickerSidebar() {
-//     // Todo
-//     // const shapeCreateVNode = createVNode(ShapeCreate);
 
-//     // shapeCreateVNode.props = {
-//     //     onShapeSelected: addNode
-//     // };
-
-//     // if (sidebarSlot.value) {
-//     //     render(shapeCreateVNode, sidebarSlot.value);
-//     // } else console.error("sidebar slot is not there");
-
-//     // sidebar.value?.expandSidebar()
-// }
-
-const fileInput = useTemplateRef("fileInput");
-const canvasContainer = useTemplateRef("canvas-container");
-const sidebar = useTemplateRef("sidebar");
-const sidebarSlot = useTemplateRef("sidebarSlot");
-const mainContainer = useTemplateRef("main-container");
-var tr: Konva.Transformer;
-var stage: Konva.Stage;
-var layer: Konva.Layer;
-
-onMounted(() => {
-    var sceneWidth = 1018;
-    var sceneHeight = 720;
-    stage = new Konva.Stage({
-        container: 'canvas-container',
-        width: Math.min(sceneWidth),
-        height: Math.min(sceneWidth)
+function createStage(page: string): Konva.Stage {
+    var size = pageSizes[page];
+    const newStage = new Konva.Stage({
+        container: `canvas-container-${page}`,
+        width: Math.min(size.width),
+        height: Math.min(size.height)
     });
     const bgLayer = new Konva.Layer();
     bgLayer.add(new Konva.Rect({
         fill: '#FFFFFF',
         x: 0,
         y: 0,
-        width: sceneWidth,
-        height: sceneHeight
+        width: size.width,
+        height: size.height
     }))
-    stage.add(bgLayer);
-    layer = new Konva.Layer();
-    stage.add(layer);
+    if (page == "inside"){
+        bgLayer.add(new Konva.Line({
+            points: [size.width/2, 0, size.width/2, size.height],
+            stroke: '#D3D3D3',
+            strokeWidth: 1
+        }));
+    }
+    newStage.add(bgLayer);
+    const drawLayer = new Konva.Layer();
+    newStage.add(drawLayer);
+    const transformer = new Konva.Transformer();
+    transformer.flipEnabled(true);
+    transformer.rotationSnaps([0, 45, 90, 135, 180, 225, 270, 315]);
+    transformer.rotationSnapTolerance(3);
 
-    tr = new Konva.Transformer();
-    tr.flipEnabled(true);
-    tr.rotationSnaps([0, 45, 90, 135, 180, 225, 270, 315]);
-    tr.rotationSnapTolerance(3);
-
-    layer.add(tr);
+    drawLayer.add(transformer);
 
     // selection handling 
-    stage.on('click tap', function (e) {
+    newStage.on('click tap', function (e) {
         // Remove all selections
-        if (e.target === stage || e.target.getLayer() === bgLayer) {
-            tr.nodes().forEach(element => {
+        if (e.target === newStage || e.target.getLayer() === bgLayer) {
+            transformer.nodes().forEach(element => {
                 element.setDraggable(false);
             });
             closeSidebar();
-            tr.nodes([]);
-            tr.resizeEnabled(true);
+            transformer.nodes([]);
+            transformer.resizeEnabled(true);
             return;
         }
         if (e.target.getLayer() !== layer) {
@@ -244,73 +241,167 @@ onMounted(() => {
         }
         // Select or unselect elements
         const metaPressed = e.evt.ctrlKey || e.evt.metaKey;
-        const isSelected = tr.nodes().indexOf(e.target) >= 0;
+        const isSelected = transformer.nodes().indexOf(e.target) >= 0;
 
         if (!metaPressed && !isSelected) {
             openOptionsSidebar(e.target);
             e.target.setDraggable(true);
-            tr.nodes().forEach(element => {
+            transformer.nodes().forEach(element => {
                 element.setDraggable(false);
             });
-            tr.nodes([e.target]);
-            tr.resizeEnabled(!(e.target instanceof Konva.Text));
+            transformer.nodes([e.target]);
+            transformer.resizeEnabled(!(e.target instanceof Konva.Text));
             
         } else if (metaPressed && isSelected) {
-            const nodes = tr.nodes().slice();
+            const nodes = transformer.nodes().slice();
             nodes.splice(nodes.indexOf(e.target), 1);
             if (nodes.length == 0) closeSidebar();
             e.target.setDraggable(false);
-            tr.nodes(nodes);
-            tr.resizeEnabled(!nodes.some(node => node instanceof Konva.Text));
+            transformer.nodes(nodes);
+            transformer.resizeEnabled(!nodes.some(node => node instanceof Konva.Text));
         } else if (metaPressed && !isSelected) {
             e.target.setDraggable(true);
-            const nodes = tr.nodes().concat([e.target]);
+            const nodes = transformer.nodes().concat([e.target]);
             if (nodes.length == 1) openOptionsSidebar(e.target);
             else closeSidebar();
-            tr.nodes(nodes);
-            if (e.target instanceof Konva.Text) tr.resizeEnabled(false);
+            transformer.nodes(nodes);
+            if (e.target instanceof Konva.Text) transformer.resizeEnabled(false);
         }
     });
-
-    function fitStageIntoParentContainer() {
-        if (!mainContainer.value) return;
-        var container = mainContainer.value;
-
-        var containerWidth = container.offsetWidth;
-        var containerHeight = container.offsetHeight;
-
-        var scaleX = containerWidth / sceneWidth;
-        var scaleY = containerHeight / sceneHeight;
-        
-        var scale = Math.min(scaleX, scaleY, 1);
-        
-        stage.width(sceneWidth * scale);
-        stage.height(sceneHeight * scale);
-        stage.scale({ x: scale, y: scale });
+    bgLayer.draw();
+    drawLayer.draw();
+    return newStage;
+}
+function switchPage(page: string) {
+    if (tr){
+        tr.nodes().forEach(element => {
+            element.setDraggable(false);
+        });
+        closeSidebar();
+        tr.nodes([]);
+        tr.resizeEnabled(true);
     }
+    currentPage.value = page;
+    stage = stageMap.get(page)!;
+    layer = stage.getLayers()[1];
+    tr = layer.getChildren().find((child) => child instanceof Konva.Transformer) as Konva.Transformer;
+    
+    nextTick(() => {
+        fitStageIntoParentContainer();
+    });
+}
+function fitStageIntoParentContainer() {
+    if (!mainContainer.value) return;
+    var container = mainContainer.value;
 
-      fitStageIntoParentContainer();
-      window.addEventListener('resize', fitStageIntoParentContainer);
+    var containerWidth = container.offsetWidth - 50;
+    var containerHeight = container.offsetHeight - 50;
 
-    layer.draw();
-    tr.setZIndex(layer.children.length - 1);
+    var scaleX = containerWidth / pageSizes[currentPage.value].width;
+    var scaleY = containerHeight / pageSizes[currentPage.value].height;
+    
+    var scale = Math.min(scaleX, scaleY, 1);
+    
+    stage.width(pageSizes[currentPage.value].width * scale);
+    stage.height(pageSizes[currentPage.value].height * scale);
+
+    stage.scaleX(scale);
+    stage.scaleY(scale);
+}
+
+
+const pageSizes: { [key: string]: { width: number; height: number } } = {
+    "front" : {width: 1414/2, height: 1000},
+    "inside" : {width: 1414, height: 1000},
+    "back" : {width: 1414/2, height: 1000},
+}
+
+const currentPage = ref("front");
+const settingUp = ref(true);
+const stageMap = new Map<string, Konva.Stage>();
+const fileInput = useTemplateRef("fileInput");
+const sidebar = useTemplateRef("sidebar");
+const sidebarSlot = useTemplateRef("sidebarSlot");
+const mainContainer = useTemplateRef("main-container");
+var stage: Konva.Stage;
+var layer: Konva.Layer;
+var tr: Konva.Transformer;
+
+onMounted(() => {
+    stageMap.set("front", createStage("front"));
+    stageMap.set("inside", createStage("inside"));
+    stageMap.set("back", createStage("back"));
+    switchPage('front');
+    
+    fitStageIntoParentContainer();
+    window.addEventListener('resize', fitStageIntoParentContainer);
+
+    settingUp.value = false;
 });
 </script>
 
 <style scoped>
+.screen {
+    height: 100vh; 
+    background-color: #F5F3F4;
+}
+
 .main-container {
     background-color: #F5F3F4;
     width: 100%;
     display: flex;
+    height: calc(100vh - 96px);
     justify-content: center;
     align-items: center;
-    min-height: 100vh; 
-    padding: 20px; 
 }
 
-#canvas-container {
-    margin: 0px;
-    padding: 0px;
-    overflow: hidden;
+@media (min-width: 996px) {
+  .main-container {
+    height: calc(100vh - 56px);
+  }
 }
+.canvas-container {
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
+}
+
+footer {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    display: flex;
+    align-items:end;
+}
+
+footer .btn-group {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    border-radius: 12px 12px 0 0; 
+    overflow: hidden; 
+}
+
+footer .btn-group button {
+    padding: 24px 32px;
+    border: 1px solid #dbd5d4;
+    border-bottom: 0px;
+    background: white;
+    cursor: pointer;
+    border-radius: 0;
+}
+
+footer .btn-group button:first-child {
+    border-radius: 12px 0 0 0; 
+}
+
+footer .btn-group button:last-child {
+    border-radius: 0 12px 0 0; 
+}
+
+footer .btn-group button.active {
+    background: #E5383B;
+    color: white;
+    border-color: #BA181B;
+}
+
 </style>
