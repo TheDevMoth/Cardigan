@@ -78,6 +78,7 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
+import { clamp } from '@/scripts/Utils';
 import Konva from 'konva';
 
 const props = defineProps<{ shape: Konva.Shape }>();
@@ -160,9 +161,6 @@ watch(() => props.shape, (newShape) => {
     sides.value = (newShape as Konva.RegularPolygon).sides?.() || 6;
 }, { deep: true });
 
-function clamp(value: number, min: number, max: number): number {
-    return Math.min(Math.max(min, value), max);
-}
 </script>
 
 <style scoped>
