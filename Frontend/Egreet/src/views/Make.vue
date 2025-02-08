@@ -24,7 +24,9 @@
                     </div>
                 </template>
                 <template #end>
-                    ho
+                    <button type="button" class="btn btn-danger" @click="downloadImage()">
+                        Download
+                    </button>
                 </template>
             </NavigationBar>
         </header>
@@ -308,7 +310,15 @@ function fitStageIntoParentContainer() {
     stage.scaleX(scale);
     stage.scaleY(scale);
 }
-
+function downloadImage() {
+    const dataURL = stage.toDataURL({ pixelRatio: 1 });
+    const link = document.createElement('a');
+    link.href = dataURL;
+    link.download = `${currentPage.value}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
 
 const pageSizes: { [key: string]: { width: number; height: number } } = {
     "front" : {width: 1414/2, height: 1000},
@@ -360,6 +370,7 @@ onMounted(() => {
     height: calc(100vh - 56px);
   }
 }
+
 .canvas-container {
     box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
 }
