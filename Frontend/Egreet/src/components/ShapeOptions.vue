@@ -21,6 +21,10 @@
                         <label class="form-label">Opacity:</label>
                         <input v-model.number="opacity" type="range" min="0" max="1" step="0.01" class="form-range" />
                     </div>
+                    <div v-if="hasProperty('fillEnabled')" class="col-md-6">
+                        <label class="form-label">Fill Enabled:</label>
+                        <div><input v-model="fillEnabled" type="checkbox" class="form-check-input" /></div>
+                    </div>
                     <div v-if="hasProperty('text')" class="col-12">
                         <label class="form-label">Text:</label>
                         <textarea v-model="text" class="form-control" rows="3" @keydown.enter.stop></textarea>
@@ -36,11 +40,11 @@
                             <option value="Times New Roman">Times New Roman</option>
                             <option value="Verdana">Verdana</option>
                             <option value="Courier New">Courier New</option>
-                            <option value="Courier New">Calibri</option>
+                            <option value="Calibri">Calibri</option>
                         </select>
                     </div>
                     <div v-if="hasProperty('numPoints')" class="col-md-6">
-                        <label class="form-label">Num Points:</label>
+                        <label class="form-label">Points:</label>
                         <input v-model.number="numPoints" type="number" min="1" class="form-control" />
                     </div>
                     <div v-if="hasProperty('innerRadius')" class="col-md-6">
@@ -51,8 +55,16 @@
                         <label class="form-label">Outer Radius:</label>
                         <input v-model.number="outerRadius" type="number" min="0" class="form-control" />
                     </div>
+                    <div v-if="hasProperty('bottomSharpness')" class="col-md-6">
+                        <label class="form-label">Sharpness:</label>
+                        <input v-model.number="bottomSharpness" type="number" min="0" class="form-control" />
+                    </div>
+                    <div v-if="hasProperty('sides')" class="col-md-6">
+                        <label class="form-label">Sides:</label>
+                        <input v-model.number="sides" type="number" min="3" class="form-control" />
+                    </div>
                     <div class="col-md-6">
-                        <label class="form-label">z-index:</label>
+                        <label class="form-label">Z-index:</label>
                         <input v-model.number="zIndex" type="number" min="0" class="form-control" />
                     </div>
                     <div class="col-12">
@@ -74,11 +86,14 @@ const emit = defineEmits(["delete"]);
 const shapeType = computed(() => props.shape.getClassName());
 
 const properties: Record<string, string[]> = {
-    Rect: ['stroke', 'strokeWidth', 'fill', 'cornerRadius', 'opacity'],
-    Circle: ['stroke', 'strokeWidth', 'fill', 'opacity'],
+    Rect: ['stroke', 'strokeWidth', 'fill', 'fillEnabled', 'cornerRadius', 'opacity'],
+    Circle: ['stroke', 'strokeWidth', 'fill', 'fillEnabled', 'opacity'],
     Image: ['opacity'],
     Text: ['text', 'fontSize', 'fontFamily', 'fill', 'opacity'],
-    Star: ['stroke', 'strokeWidth', 'fill', 'opacity', 'numPoints', 'innerRadius', 'outerRadius']
+    Star: ['stroke', 'strokeWidth', 'fill', 'fillEnabled', 'opacity', 'numPoints', 'innerRadius', 'outerRadius'],
+    Triangle: ['stroke', 'strokeWidth', 'fill', 'fillEnabled', 'opacity'],
+    Heart: ['stroke', 'strokeWidth', 'fill', 'fillEnabled', 'opacity', 'innerRadius', 'bottomSharpness'],
+    RegularPolygon: ['stroke', 'strokeWidth', 'fill', 'fillEnabled', 'opacity', 'sides']
 };
 
 const hasProperty = (prop: string) => properties[shapeType.value]?.includes(prop);
@@ -94,6 +109,9 @@ const numPoints = ref((props.shape as Konva.Star).numPoints?.() || 5);
 const innerRadius = ref((props.shape as Konva.Star).innerRadius?.() || 10);
 const outerRadius = ref((props.shape as Konva.Star).outerRadius?.() || 20);
 const zIndex = ref(props.shape.getZIndex());
+const fillEnabled = ref(props.shape.fillEnabled?.() || true);
+const bottomSharpness = ref((props.shape as any).bottomSharpness?.() || 50);
+const sides = ref((props.shape as Konva.RegularPolygon).sides?.() || 6);
 
 const updateShape = () => {
     if (!props.shape) return;
@@ -115,11 +133,14 @@ const updateShape = () => {
     if (hasProperty('numPoints')) (props.shape as Konva.Star).numPoints(numPoints.value);
     if (hasProperty('innerRadius')) (props.shape as Konva.Star).innerRadius(innerRadius.value);
     if (hasProperty('outerRadius')) (props.shape as Konva.Star).outerRadius(outerRadius.value);
+    if (hasProperty('fillEnabled')) props.shape.fillEnabled(fillEnabled.value);
+    if (hasProperty('bottomSharpness')) (props.shape as any).bottomSharpness(bottomSharpness.value);
+    if (hasProperty('sides')) (props.shape as Konva.RegularPolygon).sides(sides.value);
     props.shape.setZIndex(zIndex.value);
     props.shape.getLayer()?.batchDraw();
 };
 
-watch([fill, stroke, strokeWidth, opacity, text, fontSize, fontFamily, numPoints, innerRadius, outerRadius, zIndex], () => {
+watch([fill, stroke, strokeWidth, opacity, text, fontSize, fontFamily, numPoints, innerRadius, outerRadius, zIndex, fillEnabled, bottomSharpness, sides], () => {
     updateShape();
 });
 
@@ -134,6 +155,9 @@ watch(() => props.shape, (newShape) => {
     numPoints.value = (newShape as Konva.Star).numPoints?.() || 5;
     innerRadius.value = (newShape as Konva.Star).innerRadius?.() || 10;
     outerRadius.value = (newShape as Konva.Star).outerRadius?.() || 20;
+    fillEnabled.value = newShape.fillEnabled?.() || true;
+    bottomSharpness.value = (newShape as any).bottomSharpness?.() || 50;
+    sides.value = (newShape as Konva.RegularPolygon).sides?.() || 6;
 }, { deep: true });
 
 function clamp(value: number, min: number, max: number): number {
