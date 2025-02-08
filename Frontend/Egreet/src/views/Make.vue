@@ -69,7 +69,8 @@ import ShapeOptions from '@/components/ShapeOptions.vue';
 import ShapeCreate from '@/components/ShapeCreate.vue';
 import Konva from 'konva';
 import * as Guides from '@/scripts/Guides';
-import {clamp} from '@/scripts/Utils';
+import { clamp } from '@/scripts/Utils';
+import type { Vector2d } from 'konva/lib/types';
 
 function openOptionsSidebar(selectedItem: any) {
     if (sidebarSlot.value && sidebarSlot.value.hasChildNodes()) {
@@ -277,13 +278,13 @@ function createStage(page: string): Konva.Stage {
             lineGuideStops = Guides.getLineGuideStops(transformer.nodes() as Konva.Shape[], stage, layer, currentPage.value == "inside");
         }
     });
-    
+
     drawLayer.on('dragmove', function (e) {
         if (!(e.target instanceof Konva.Shape)) return;
 
         // clear all previous lines on the screen
         drawLayer.find('.guid-line').forEach((l) => l.destroy());
-        
+
         var itemBounds = Guides.getObjectSnappingEdges(tr.nodes() as Konva.Shape[], e.target);
         var guides = Guides.getGuides(lineGuideStops, itemBounds);
 
@@ -303,7 +304,7 @@ function createStage(page: string): Konva.Stage {
                 }
             }
         });
-        
+
         e.target.absolutePosition(absPos);
     });
 
@@ -374,6 +375,8 @@ const fileInput = useTemplateRef("fileInput");
 const sidebar = useTemplateRef("sidebar");
 const sidebarSlot = useTemplateRef("sidebarSlot");
 const mainContainer = useTemplateRef("main-container");
+var copiedShapes: Konva.Node[] = [];
+var pastePoint: Vector2d;
 
 var lineGuideStops: ReturnType<typeof Guides.getLineGuideStops>;
 var stage: Konva.Stage;
@@ -391,9 +394,53 @@ onMounted(() => {
     window.addEventListener('keydown', (event) => {
         if (event.key === 'Delete') {
             deleteSelected();
+        } else if ((event.key === 'c' || event.key === 'C') && event.ctrlKey) {
+            copiedShapes = tr.nodes();
+            var midpoint = {x: 10, y: 10};
+            copiedShapes.forEach((shape) => {
+                midpoint.x += shape.x();
+                midpoint.y += shape.y();
+            });
+            midpoint.x /= copiedShapes.length;
+            midpoint.y /= copiedShapes.length;
+            pastePoint = midpoint;
+        } else if ((event.key === 'v' || event.key === 'V') && event.ctrlKey) {
+            var midpoint = {x: 0, y: 0};
+            copiedShapes.forEach((shape) => {
+                midpoint.x += shape.x();
+                midpoint.y += shape.y();
+            });
+            midpoint.x /= copiedShapes.length;
+            midpoint.y /= copiedShapes.length;
+            const newSelect: Konva.Shape[] = [];
+            copiedShapes.forEach((shape) => {
+                var clone = shape.clone();
+                clone.x(pastePoint.x + shape.x() - midpoint.x);
+                clone.y(pastePoint.y + shape.y() - midpoint.y);
+                layer.add(clone);
+                newSelect.push(clone);
+            });
+            tr.setZIndex(layer.children.length - 1);
+            tr.nodes(newSelect);
+            copiedShapes = newSelect;
+            var midpoint = {x: 10, y: 10};
+            copiedShapes.forEach((shape) => {
+                midpoint.x += shape.x();
+                midpoint.y += shape.y();
+            });
+            midpoint.x /= copiedShapes.length;
+            midpoint.y /= copiedShapes.length;
+            pastePoint = midpoint;
         }
-    });
 
+    });
+    window.addEventListener('mousedown', (event) => {
+        const rect = stage.container().getBoundingClientRect();
+        pastePoint = {
+            x: clamp(event.clientX - rect.left, 0, stage.width() / stage.scaleX()),
+            y: clamp(event.clientY - rect.top, 0, stage.height() / stage.scaleY())
+        };
+    });
     settingUp.value = false;
 });
 </script>
