@@ -13,10 +13,10 @@
                             <i class="bi bi-plus-square-dotted px-2 my-0" style="font-size: 1.5rem" />
                             <span>Add Shape</span>
                         </button>
-                        <!-- <button type="button" class="btn me-3 align-items-center d-flex py-0" @click="openStickerSidebar">
-                            <i class="bi bi-sticky px-2 my-0" style="font-size: 1.5rem"/>
-                            <span>Add Sticker</span>
-                        </button> -->
+                        <button type="button" class="btn me-3 align-items-center d-flex py-0" @click="openEmojiSidebar">
+                            <i class="bi bi-emoji-wink px-2 my-0" style="font-size: 1.5rem"/>
+                            <span>Add Emoji</span>
+                        </button>
                         <button type="button" class="btn align-items-center d-flex py-0" @click="fileInput?.click()">
                             <i class="bi bi-image px-2 my-0" style="font-size: 1.5rem" />
                             <span>Add Image</span>
@@ -67,6 +67,7 @@ import NavigationBar from '@/components/NavigationBar.vue';
 import SideBar from '@/components/SideBar.vue';
 import ShapeOptions from '@/components/ShapeOptions.vue';
 import ShapeCreate from '@/components/ShapeCreate.vue';
+import EmojiCreate from '@/components/EmojiCreate.vue';
 import Konva from 'konva';
 import * as Guides from '@/scripts/Guides';
 import { clamp } from '@/scripts/Utils';
@@ -106,6 +107,20 @@ function openShapesSidebar() {
 
     sidebar.value?.expandSidebar()
 }
+function openEmojiSidebar() {
+    const emojiCreateVNode = createVNode(EmojiCreate);
+
+    emojiCreateVNode.props = {
+        onEmojiSelected: addNode
+    };
+
+    if (sidebarSlot.value) {
+        render(emojiCreateVNode, sidebarSlot.value);
+    } else console.error("sidebar slot is not there");
+
+    sidebar.value?.expandSidebar()
+}
+
 function closeSidebar() {
     sidebar.value?.retractSidebar();
     if (sidebarSlot.value) {
@@ -138,7 +153,7 @@ function addNode(node: Konva.Shape) {
         element.setDraggable(false);
     });
     tr.nodes([node]);
-    tr.resizeEnabled(!(node instanceof Konva.Text));
+    tr.resizeEnabled(!(node.getClassName() == "Text"));
     tr.setZIndex(layer.children.length - 1);
     lineGuideStops = Guides.getLineGuideStops([node], stage, layer, currentPage.value == "inside");
 }
@@ -257,7 +272,7 @@ function createStage(page: string): Konva.Stage {
                 element.setDraggable(false);
             });
             transformer.nodes([e.target]);
-            transformer.resizeEnabled(!(e.target instanceof Konva.Text));
+            transformer.resizeEnabled(!(e.target.getClassName() == "Text"));
             lineGuideStops = Guides.getLineGuideStops(transformer.nodes() as Konva.Shape[], stage, layer, currentPage.value == "inside");
 
         } else if (metaPressed && isSelected) {
@@ -266,7 +281,7 @@ function createStage(page: string): Konva.Stage {
             if (nodes.length == 0) closeSidebar();
             e.target.setDraggable(false);
             transformer.nodes(nodes);
-            transformer.resizeEnabled(!nodes.some(node => node instanceof Konva.Text));
+            transformer.resizeEnabled(!nodes.some(node => node.getClassName() == "Text"));
             lineGuideStops = Guides.getLineGuideStops(transformer.nodes() as Konva.Shape[], stage, layer, currentPage.value == "inside");
         } else if (metaPressed && !isSelected) {
             e.target.setDraggable(true);
@@ -274,7 +289,7 @@ function createStage(page: string): Konva.Stage {
             if (nodes.length == 1) openOptionsSidebar(e.target);
             else closeSidebar();
             transformer.nodes(nodes);
-            if (e.target instanceof Konva.Text) transformer.resizeEnabled(false);
+            if (e.target.getClassName() == "Text") transformer.resizeEnabled(false);
             lineGuideStops = Guides.getLineGuideStops(transformer.nodes() as Konva.Shape[], stage, layer, currentPage.value == "inside");
         }
     });
@@ -396,7 +411,7 @@ onMounted(() => {
             deleteSelected();
         } else if ((event.key === 'c' || event.key === 'C') && event.ctrlKey) {
             copiedShapes = tr.nodes();
-            var midpoint = {x: 10, y: 10};
+            var midpoint = { x: 10, y: 10 };
             copiedShapes.forEach((shape) => {
                 midpoint.x += shape.x();
                 midpoint.y += shape.y();
@@ -405,7 +420,7 @@ onMounted(() => {
             midpoint.y /= copiedShapes.length;
             pastePoint = midpoint;
         } else if ((event.key === 'v' || event.key === 'V') && event.ctrlKey) {
-            var midpoint = {x: 0, y: 0};
+            var midpoint = { x: 0, y: 0 };
             copiedShapes.forEach((shape) => {
                 midpoint.x += shape.x();
                 midpoint.y += shape.y();
@@ -423,7 +438,7 @@ onMounted(() => {
             tr.setZIndex(layer.children.length - 1);
             tr.nodes(newSelect);
             copiedShapes = newSelect;
-            var midpoint = {x: 10, y: 10};
+            var midpoint = { x: 10, y: 10 };
             copiedShapes.forEach((shape) => {
                 midpoint.x += shape.x();
                 midpoint.y += shape.y();

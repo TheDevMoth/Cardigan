@@ -90,6 +90,7 @@ const properties: Record<string, string[]> = {
     Rect: ['stroke', 'strokeWidth', 'fill', 'fillEnabled', 'cornerRadius', 'opacity'],
     Circle: ['stroke', 'strokeWidth', 'fill', 'fillEnabled', 'opacity'],
     Image: ['opacity'],
+    Emoji: ['opacity'],
     Text: ['text', 'fontSize', 'fontFamily', 'fill', 'opacity'],
     Star: ['stroke', 'strokeWidth', 'fill', 'fillEnabled', 'opacity', 'numPoints', 'innerRadius', 'outerRadius'],
     Triangle: ['stroke', 'strokeWidth', 'fill', 'fillEnabled', 'opacity'],
