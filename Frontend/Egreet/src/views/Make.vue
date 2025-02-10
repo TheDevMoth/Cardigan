@@ -4,17 +4,18 @@
             <NavigationBar>
                 <template #middle>
                     <div class="btn-group" role="group">
-                        <button type="button" class="btn me-3 align-items-center d-flex py-0" @click="addText">
+                        <button type="button" class="btn me-xl-3 align-items-center d-flex py-0" @click="addText">
                             <i class="bi bi-textarea-t px-2 my-0" style="font-size: 1.5rem" />
                             <span>Add Text</span>
                         </button>
-                        <button type="button" class="btn me-3 align-items-center d-flex py-0"
+                        <button type="button" class="btn me-xl-3 align-items-center d-flex py-0"
                             @click="openShapesSidebar">
                             <i class="bi bi-plus-square-dotted px-2 my-0" style="font-size: 1.5rem" />
                             <span>Add Shape</span>
                         </button>
-                        <button type="button" class="btn me-3 align-items-center d-flex py-0" @click="openEmojiSidebar">
-                            <i class="bi bi-emoji-wink px-2 my-0" style="font-size: 1.5rem"/>
+                        <button type="button" class="btn me-xl-3 align-items-center d-flex py-0"
+                            @click="openEmojiSidebar">
+                            <i class="bi bi-emoji-wink px-2 my-0" style="font-size: 1.5rem" />
                             <span>Add Emoji</span>
                         </button>
                         <button type="button" class="btn align-items-center d-flex py-0" @click="fileInput?.click()">
@@ -26,12 +27,37 @@
                     </div>
                 </template>
                 <template #end>
-                    <button type="button" class="btn btn-danger" @click="downloadImage()">
-                        Download
+                    <button type="button" class="btn btn-danger ps-3 rounded-4" data-bs-toggle="modal"
+                        data-bs-target="#doneModal">
+                        Done!
+                        <i class="bi bi-chevron-right"></i>
                     </button>
                 </template>
             </NavigationBar>
         </header>
+
+        <!-- Modal -->
+        <div class="modal fade" id="doneModal" tabindex="-1" aria-labelledby="doneModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h1 class="modal-title fs-5" id="doneModalLabel">Modal title</h1>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="list-group">
+                            <button type="button" class="list-group-item list-group-item-action"
+                                @click="downloadImages">
+                                Download as Images
+                            </button>
+                            <button type="button" class="list-group-item list-group-item-action" @click="downloadPDF">
+                                Download as PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div style="position:relative">
             <main class="main-container" ref="main-container">
                 <div :style="{ display: currentPage === 'front' ? 'block' : 'none' }" class="canvas-container"
@@ -72,6 +98,7 @@ import Konva from 'konva';
 import * as Guides from '@/scripts/Guides';
 import { clamp } from '@/scripts/Utils';
 import type { Vector2d } from 'konva/lib/types';
+import jsPDF from 'jspdf';
 
 function openOptionsSidebar(selectedItem: any) {
     if (sidebarSlot.value && sidebarSlot.value.hasChildNodes()) {
@@ -94,6 +121,7 @@ function openOptionsSidebar(selectedItem: any) {
 
     sidebar.value?.expandSidebar();
 }
+
 function openShapesSidebar() {
     const shapeCreateVNode = createVNode(ShapeCreate);
 
@@ -107,6 +135,7 @@ function openShapesSidebar() {
 
     sidebar.value?.expandSidebar()
 }
+
 function openEmojiSidebar() {
     const emojiCreateVNode = createVNode(EmojiCreate);
 
@@ -127,12 +156,14 @@ function closeSidebar() {
         render(null, sidebarSlot.value);
     }
 }
+
 function deleteSelected() {
     closeSidebar();
     tr.nodes().forEach((item) => item.destroy());
     tr.nodes([]);
     layer.batchDraw();
 }
+
 function addNode(node: Konva.Shape) {
     node.x(stage.width() / stage.scaleX() / 2);
     node.y(stage.height() / stage.scaleY() / 2);
@@ -153,19 +184,22 @@ function addNode(node: Konva.Shape) {
         element.setDraggable(false);
     });
     tr.nodes([node]);
-    tr.resizeEnabled(!(node.getClassName() == "Text"));
+    tr.resizeEnabled(!(node.name() == "Text"));
     tr.setZIndex(layer.children.length - 1);
     lineGuideStops = Guides.getLineGuideStops([node], stage, layer, currentPage.value == "inside");
 }
+
 function addText() {
     var text = new Konva.Text({
         text: 'Sample Text',
         fontSize: 30,
         fontFamily: 'Calibri',
         fill: '#000000',
+        name: "Text"
     });
     addNode(text);
 }
+
 function addImage(img: HTMLImageElement) {
     const landscape = img.width > img.height;
     const maxWidth = Math.min(img.width, pageSizes[currentPage.value].width);
@@ -190,6 +224,7 @@ function addImage(img: HTMLImageElement) {
     imageNode.scaleX(newScale);
     addNode(imageNode);
 }
+
 function handleFileUpload(event: Event) {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files[0]) {
@@ -214,6 +249,7 @@ function handleFileUpload(event: Event) {
         reader.readAsDataURL(file);
     }
 }
+
 function createStage(page: string): Konva.Stage {
     var size = pageSizes[page];
     const newStage = new Konva.Stage({
@@ -272,7 +308,7 @@ function createStage(page: string): Konva.Stage {
                 element.setDraggable(false);
             });
             transformer.nodes([e.target]);
-            transformer.resizeEnabled(!(e.target.getClassName() == "Text"));
+            transformer.resizeEnabled(!(e.target.name() == "Text"));
             lineGuideStops = Guides.getLineGuideStops(transformer.nodes() as Konva.Shape[], stage, layer, currentPage.value == "inside");
 
         } else if (metaPressed && isSelected) {
@@ -281,7 +317,7 @@ function createStage(page: string): Konva.Stage {
             if (nodes.length == 0) closeSidebar();
             e.target.setDraggable(false);
             transformer.nodes(nodes);
-            transformer.resizeEnabled(!nodes.some(node => node.getClassName() == "Text"));
+            transformer.resizeEnabled(!nodes.some(node => node.name() == "Text"));
             lineGuideStops = Guides.getLineGuideStops(transformer.nodes() as Konva.Shape[], stage, layer, currentPage.value == "inside");
         } else if (metaPressed && !isSelected) {
             e.target.setDraggable(true);
@@ -289,11 +325,10 @@ function createStage(page: string): Konva.Stage {
             if (nodes.length == 1) openOptionsSidebar(e.target);
             else closeSidebar();
             transformer.nodes(nodes);
-            if (e.target.getClassName() == "Text") transformer.resizeEnabled(false);
+            if (e.target.name() == "Text") transformer.resizeEnabled(false);
             lineGuideStops = Guides.getLineGuideStops(transformer.nodes() as Konva.Shape[], stage, layer, currentPage.value == "inside");
         }
     });
-
     drawLayer.on('dragmove', function (e) {
         if (!(e.target instanceof Konva.Shape)) return;
 
@@ -331,6 +366,7 @@ function createStage(page: string): Konva.Stage {
     drawLayer.draw();
     return newStage;
 }
+
 function switchPage(page: string) {
     if (tr) {
         tr.nodes().forEach(element => {
@@ -349,6 +385,7 @@ function switchPage(page: string) {
         fitStageIntoParentContainer();
     });
 }
+
 function fitStageIntoParentContainer() {
     if (!mainContainer.value) return;
     var container = mainContainer.value;
@@ -367,15 +404,106 @@ function fitStageIntoParentContainer() {
     stage.scaleX(scale);
     stage.scaleY(scale);
 }
-function downloadImage() {
-    const dataURL = stage.toDataURL({ pixelRatio: 1 });
-    const link = document.createElement('a');
-    link.href = dataURL;
-    link.download = `${currentPage.value}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+
+function stageToImage(page: string) {
+    if (!["front", "inside", "back"].includes(page)) return;
+
+    const lStage = stageMap.get(page)!;
+    const ogWidth = lStage.width();
+    const ogHeight = lStage.height();
+    const ogScale = lStage.scale();
+
+    lStage.width(pageSizes[page].width)
+        .height(pageSizes[page].height)
+        .scale({ x: 1, y: 1 });
+    lStage.batchDraw();
+
+    const dataURL = lStage.toDataURL({
+        pixelRatio: 1,
+        mimeType: 'image/png',
+        quality: 1
+    });
+
+    lStage.width(ogWidth)
+        .height(ogHeight)
+        .scale(ogScale);
+    lStage.batchDraw();
+
+    return dataURL;
 }
+
+function downloadImages() {
+    stageMap.forEach((stage, page) => {
+        const dataURL = stageToImage(page);
+        if (!dataURL) return;
+
+        const link = document.createElement('a');
+        link.download = `card_${page}.png`;
+        link.href = dataURL;
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
+}
+function downloadPDF() {
+    const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'pt',
+        format: [1000, 1414]
+    });
+
+    const frontImg = stageToImage('front');
+    const backImg = stageToImage('back');
+    if (frontImg && backImg) {
+        const frontStage = stageMap.get('front')!;
+        frontStage.find('Text').forEach((text) => {
+            var kText = text as Konva.Text;
+            const size = kText.fontSize() / 0.75;
+            pdf.setFontSize(size);
+            pdf.text(kText.text(), kText.x() * kText.scaleX(), kText.y() * kText.scaleY(), {
+                baseline: 'top',
+                angle: -kText.getAbsoluteRotation(),
+            });
+        });
+
+        pdf.addImage(frontImg, 'PNG', 0, 0, 707, 1000);
+
+        const backStage = stageMap.get('back')!;
+        backStage.find('Text').forEach((text) => {
+            var kText = text as Konva.Text;
+            const size = kText.fontSize() / 0.75;
+            pdf.setFontSize(size);
+            pdf.text(kText.text(), kText.x() * kText.scaleX() + 707, kText.y() * kText.scaleY(), {
+                baseline: 'top',
+                angle: -kText.getAbsoluteRotation(),
+            });
+        });
+
+        pdf.addImage(backImg, 'PNG', 707, 0, 707, 1000);
+    }
+
+    // Second page: Inside
+    pdf.addPage([1000, 1414]);
+    const insideImg = stageToImage('inside');
+    if (insideImg) {
+        const insideStage = stageMap.get('inside')!;
+        insideStage.find('Text').forEach((text) => {
+            var kText = text as Konva.Text;
+            const size = kText.fontSize() / 0.75;
+            pdf.setFontSize(size);
+            pdf.text(kText.text(), kText.x() * kText.scaleX(), kText.y() * kText.scaleY(), {
+                baseline: 'top',
+                angle: -kText.getAbsoluteRotation(),
+            });
+        });
+
+        pdf.addImage(insideImg, 'PNG', 0, 0, 1414, 1000);
+    }
+
+    pdf.save('greeting_card.pdf');
+}
+
 
 const pageSizes: { [key: string]: { width: number; height: number } } = {
     "front": { width: 1414 / 2, height: 1000 },
@@ -436,7 +564,13 @@ onMounted(() => {
                 newSelect.push(clone);
             });
             tr.setZIndex(layer.children.length - 1);
+            tr.nodes().forEach(element => {
+                element.setDraggable(false);
+            });
             tr.nodes(newSelect);
+            tr.nodes().forEach(element => {
+                element.setDraggable(true);
+            });
             copiedShapes = newSelect;
             var midpoint = { x: 10, y: 10 };
             copiedShapes.forEach((shape) => {

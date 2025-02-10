@@ -71,6 +71,7 @@ function selectEmoji(emoji:Emoji) {
         text: getEmojiChar(emoji.code),
         fontSize: 50,
         fontFamily: 'Arial',
+        name: "Emoji"
     });
     emojiBox.className = "Emoji";
     

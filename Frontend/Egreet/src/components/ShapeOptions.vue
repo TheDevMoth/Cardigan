@@ -84,7 +84,7 @@ import Konva from 'konva';
 const props = defineProps<{ shape: Konva.Shape }>();
 const emit = defineEmits(["delete"]);
 
-const shapeType = computed(() => props.shape.getClassName());
+const shapeType = computed(() => props.shape.name() ? props.shape.name() : props.shape.getClassName());
 
 const properties: Record<string, string[]> = {
     Rect: ['stroke', 'strokeWidth', 'fill', 'fillEnabled', 'cornerRadius', 'opacity'],
