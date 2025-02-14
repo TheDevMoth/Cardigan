@@ -4,15 +4,23 @@
     </header>
     <div class="background">
         <div class="postcard-container" :style="{ width: containerWidth + 'px', height: containerHeight + 'px' }">
-            <div class="postcard" :class="{ 'on-back': onBack, 'on-inside': onInside, 'on-front': onFront }">
+            <div v-if="imagesRetrieved" class="postcard" :class="{ 'on-back': onBack, 'on-inside': onInside, 'on-front': onFront }">
                 <div class="front" :style="imageStyle(frontImage)" @click="right()"
                     :class="{ 'on-back': onBack, 'on-inside': onInside, 'on-front': onFront }"></div>
-                <div class="inside-right" :style="imageStyle(insideRightImage)" @click="right()"
+                <div class="inside-right" :style="imageStyle(backInsideImage)" @click="right()"
                     :class="{ 'on-back': onBack, 'on-inside': onInside, 'on-front': onFront }"></div>
-                <div class="inside-left" :style="imageStyle(insideLeftImage)" @click="left()"
+                <div class="inside-left" :style="imageStyle(frontInsideImage)" @click="left()"
                     :class="{ 'on-back': onBack, 'on-inside': onInside, 'on-front': onFront }"></div>
                 <div class="back" :style="imageStyle(backImage)" @click="left()"
                     :class="{ 'on-back': onBack, 'on-inside': onInside, 'on-front': onFront }"></div>
+            </div>
+            <div v-else >
+                <div v-if="couldNotRetrieve">
+                    <h1>{{ error }}</h1>
+                </div>
+                <div v-else>
+                    <h1>Please, wait while we retrieve you card</h1>
+                </div>
             </div>
         </div>
         <footer>
@@ -30,13 +38,19 @@
 
 <script setup>
 import NavigationBar from '@/components/NavigationBar.vue';
+import axios from 'axios';
 import { ref, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 
-const frontImage = ref('/front.png');
-const insideRightImage = ref('/insideRight.png');
-const insideLeftImage = ref('/insideLeft.png');
-const backImage = ref('/back.png');
+const route = useRoute()
+const cardId = route.params.id
 
+const frontImage = ref("");
+const backInsideImage = ref("");
+const frontInsideImage = ref("");
+const backImage = ref("");
+
+const imagesRetrieved = ref(false);
 const onFront = ref(true);
 const onInside = ref(false);
 const onBack = ref(false);
@@ -47,9 +61,27 @@ const containerHeight = ref(0);
 const lastActionTime = ref(0);
 const COOLDOWN_DURATION = 1200;
 
-onMounted(() => {
+const couldNotRetrieve = ref(false);
+const error = ref("");
+
+const BASE_URL = "/";
+
+onMounted(async () => {
     adjustContainerSize();
     window.addEventListener('resize', adjustContainerSize);
+    
+    await axios.get(`/api/card/${cardId}`).then((result) => {
+        frontImage.value = result.data["front"];
+        frontInsideImage.value = result.data["front_inside"];
+        backInsideImage.value = result.data["back_inside"];
+        backImage.value = result.data["back"];
+        imagesRetrieved.value = true;
+        
+        console.log("thend");
+    }).catch((reason) => {
+        couldNotRetrieve.value = true;
+        error.value = reason;
+    });
 });
 
 const adjustContainerSize = () => {
@@ -102,7 +134,7 @@ function right() {
 
 const imageStyle = (image) => {
     return {
-        backgroundImage: `url(${image})`,
+        backgroundImage: `url(${BASE_URL}${image})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
     };
@@ -182,7 +214,7 @@ footer .btn-group button:last-child {
 }
 
 .inside-left.on-front {
-    transform: rotateY(180deg);
+    transform: rotateY(180deg) translateX(-50%);
 }
 
 .inside-right.on-front {

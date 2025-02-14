@@ -24,11 +24,10 @@
         <div class="emoji-container">
             <div class="emoji-grid">
                 <button
-                    v-for="emoji in filteredEmojis"
-                    :key="emoji.code"
+                    v-for="(emoji, index) in filteredEmojis"
+                    :key="emoji.code + index"
                     @click="selectEmoji(emoji)"
                     class="emoji-button"
-                    :title="emoji.name"
                 >
                     <span class="emoji-char">{{ getEmojiChar(emoji.code) }}</span>
                 </button>

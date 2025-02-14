@@ -6,7 +6,7 @@ import Card from "../views/Card.vue";
 const routes = [
     { path: "/", component: Home },
     { path: "/make", component: Make },
-    { path: "/card", component: Card },
+    { path: "/card/:id", component: Card },
 ];
 
 const router = createRouter({

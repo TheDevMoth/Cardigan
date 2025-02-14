@@ -46,6 +46,9 @@
                     </div>
                     <div class="modal-body">
                         <div class="list-group">
+                            <button type="button" class="list-group-item list-group-item-action" data-bs-target="#shareModal" data-bs-toggle="modal" @click="shareCard">
+                                Share as Cardigan card (url)
+                            </button>
                             <button type="button" class="list-group-item list-group-item-action"
                                 @click="downloadImages">
                                 Download as Images
@@ -57,6 +60,24 @@
                     </div>
                 </div>
             </div>
+        </div>
+        <div class="modal fade" id="shareModal" data-bs-backdrop="static" aria-hidden="true" aria-labelledby="shareModalLabel" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="shareModalLabel">{{ resultsReceived ? "Here is the link to your card" : "Your card is being created" }}</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" @click="closeShareModal"></button>
+                </div>
+                <div class="modal-body">
+                    <span v-if="resultsReceived">
+                        {{ results }}
+                    </span>
+                    <div v-else>
+                        This is supposed to be a loading bar...
+                    </div>
+                </div>
+            </div>
+        </div>
         </div>
         <div style="position:relative">
             <main class="main-container" ref="main-container">
@@ -99,6 +120,7 @@ import * as Guides from '@/scripts/Guides';
 import { clamp } from '@/scripts/Utils';
 import type { Vector2d } from 'konva/lib/types';
 import jsPDF from 'jspdf';
+import axios from 'axios';
 
 function openOptionsSidebar(selectedItem: any) {
     if (sidebarSlot.value && sidebarSlot.value.hasChildNodes()) {
@@ -362,6 +384,27 @@ function createStage(page: string): Konva.Stage {
         drawLayer.find('.guid-line').forEach((l) => l.destroy());
     });
 
+    var text = new Konva.Text({
+        text: `${page} Text`,
+        fontSize: 30,
+        fontFamily: 'Calibri',
+        fill: '#000000',
+        name: "Text"
+    });
+    text.x(newStage.width() / newStage.scaleX() / 2);
+    text.y(newStage.height() / newStage.scaleY() / 2);
+    text.on('mouseover', function () {
+        document.body.style.cursor = 'pointer';
+    });
+    text.on('mouseout', function () {
+        document.body.style.cursor = 'default';
+    });
+    text.on('dragmove', () => {
+        text.x(clamp(text.x(), -text.width(), newStage.width() / newStage.scaleX() + text.height()));
+        text.y(clamp(text.y(), -text.height(), newStage.height() / newStage.scaleY() + text.height()));
+    });
+    drawLayer.add(text);
+
     bgLayer.draw();
     drawLayer.draw();
     return newStage;
@@ -418,7 +461,7 @@ function stageToImage(page: string) {
         .scale({ x: 1, y: 1 });
     lStage.batchDraw();
 
-    const dataURL = lStage.toDataURL({
+    const result = lStage.toDataURL({
         pixelRatio: 1,
         mimeType: 'image/png',
         quality: 1
@@ -429,9 +472,65 @@ function stageToImage(page: string) {
         .scale(ogScale);
     lStage.batchDraw();
 
-    return dataURL;
+    return result;
 }
+async function stageToBlob(page: string) {
+    if (!["front", "inside", "back"].includes(page)) return;
 
+    const lStage = stageMap.get(page)!;
+    const ogWidth = lStage.width();
+    const ogHeight = lStage.height();
+    const ogScale = lStage.scale();
+
+    lStage.width(pageSizes[page].width)
+        .height(pageSizes[page].height)
+        .scale({ x: 1, y: 1 });
+    lStage.batchDraw();
+
+    const result = await lStage.toBlob({
+        pixelRatio: 1,
+        mimeType: 'image/png',
+        quality: 1
+    });
+
+    lStage.width(ogWidth)
+        .height(ogHeight)
+        .scale(ogScale);
+    lStage.batchDraw();
+
+    return result;
+}
+async function shareCard() {
+    waitingForResult = true;
+    
+    const formData = new FormData();
+    const pages = ['front', 'inside', 'back'];
+    
+    for (const page of pages) {
+        const blob = await stageToBlob(page).then(blob => blob as Blob);
+        if (blob) {
+            formData.append(page, blob, `${page}.png`);
+        }
+    }
+
+    try {
+        const result = await axios.post("/api/card/", formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+        
+        if (!waitingForResult) return;
+        resultsReceived.value = true;
+        results.value = `${window.location.origin}/card/${result.data.id}`;
+    } catch (error: any) {
+        if (!waitingForResult) return;
+        results.value = `Error: ${error.message}`;
+        resultsReceived.value = true;
+    } finally {
+        waitingForResult = false;
+    }
+}
 function downloadImages() {
     stageMap.forEach((stage, page) => {
         const dataURL = stageToImage(page);
@@ -503,7 +602,11 @@ function downloadPDF() {
 
     pdf.save('greeting_card.pdf');
 }
-
+function closeShareModal() {
+    resultsReceived.value = false;
+    waitingForResult = false;
+    results.value = "";
+}
 
 const pageSizes: { [key: string]: { width: number; height: number } } = {
     "front": { width: 1414 / 2, height: 1000 },
@@ -525,6 +628,10 @@ var lineGuideStops: ReturnType<typeof Guides.getLineGuideStops>;
 var stage: Konva.Stage;
 var layer: Konva.Layer;
 var tr: Konva.Transformer;
+
+const resultsReceived = ref(false);
+var waitingForResult = false;
+const results = ref("");
 
 onMounted(() => {
     stageMap.set("front", createStage("front"));
