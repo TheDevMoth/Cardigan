@@ -1,12 +1,12 @@
 
 from datetime import datetime
 from typing import Annotated, Optional
-from uuid import UUID
+from nanoid import generate
 from fastapi import Depends
 from sqlmodel import Field, Session, SQLModel, create_engine
 
 class Card(SQLModel, table=True):
-    id: Optional[UUID] = Field(primary_key=True, default=None)
+    id: Optional[str] = Field(primary_key=True, default_factory=lambda: generate(size=12))
     front: str = Field(default=None)
     front_inside: str = Field(default=None)
     back_inside: str = Field(default=None)

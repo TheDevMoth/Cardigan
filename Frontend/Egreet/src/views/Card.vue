@@ -64,8 +64,6 @@ const COOLDOWN_DURATION = 1200;
 const couldNotRetrieve = ref(false);
 const error = ref("");
 
-const BASE_URL = "/";
-
 onMounted(async () => {
     adjustContainerSize();
     window.addEventListener('resize', adjustContainerSize);
@@ -131,10 +129,9 @@ function right() {
     }
 }
 
-
 const imageStyle = (image) => {
     return {
-        backgroundImage: `url(${BASE_URL}${image})`,
+        backgroundImage: `url(${image})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
     };
