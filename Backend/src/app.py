@@ -1,32 +1,41 @@
-import asyncio
-from uuid import uuid4, UUID
+
+import logging
+import os
 from fastapi import FastAPI, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from nanoid import generate
-from database import Card, SessionDep, create_db_and_tables
-from sqlmodel import select
 from PIL import Image
 from io import BytesIO
 
 from azure.identity import DefaultAzureCredential
-from azure.storage.blob import BlobServiceClient, ContainerClient
+from azure.storage.blob import BlobServiceClient
+from pydantic import BaseModel, Field
 
-account_url = "https://cardiganstorage.blob.core.windows.net"
-blob_service_client: BlobServiceClient = None
-card_storage: ContainerClient  = None
+# Cosmos DB Configuration
+from azure.cosmosdb.table import TableService
 
-def init_blob_service_client():
-    """Ensure the BlobServiceClient is initialized and reused."""
-    global blob_service_client, card_storage
-    if blob_service_client is None:
-        credential = DefaultAzureCredential()
-        blob_service_client = BlobServiceClient(account_url, credential=credential)
-        card_storage = blob_service_client.get_container_client(container="card-storage")
-        
+the_connection_string = os.environ["COSMOS_CONNECTION_STRING"]
+table = TableService(endpoint_suffix = "table.cosmos.azure.com", connection_string= the_connection_string)
+
+COSMOS_CONTAINER_NAME = "cardtable"
+ACCOUNT_URL = "https://cardiganstorage.blob.core.windows.net"
+BLOB_STORAGE = "card-storage"
+
+credential = DefaultAzureCredential()
+blob_service_client = BlobServiceClient(ACCOUNT_URL, credential=credential)
+card_storage = blob_service_client.get_container_client(container=BLOB_STORAGE) 
+
+
+class Card(BaseModel):
+    PartitionKey: str = Field(default="card")
+    RowKey: str = Field()
+    front: bool = Field(default=None)
+    front_inside: bool = Field(default=None)
+    back_inside: bool = Field(default=None)
+    back: bool = Field(default=None)
+    audio: str = Field(default=None)
+
 app = FastAPI()
-
-init_blob_service_client()
-create_db_and_tables()
 
 app.add_middleware(
     CORSMiddleware,
@@ -38,24 +47,15 @@ app.add_middleware(
 
 @app.post("/card")
 async def upload_card(
-    session: SessionDep,
     front: UploadFile = UploadFile(...),
     inside: UploadFile = UploadFile(...),
     back: UploadFile = UploadFile(...),
+    audio: UploadFile = UploadFile(...)
 ):
     # Input validation
     for file in [front, inside, back]:
         if file.content_type not in ["image/jpeg", "image/png"]:
             return {"error": f"File {file.filename} is not a valid image."}
-
-    id = generate(size=12)
-    card = Card(
-        id=id,
-        front=f"{id}_front",
-        front_inside=f"{id}_front_inside",
-        back_inside=f"{id}_back_inside",
-        back=f"{id}_back",
-    )
 
     # Read the original image bytes
     front_bytes = BytesIO(await front.read())
@@ -74,6 +74,15 @@ async def upload_card(
     if inside_img.size != (1414, 1000):
         return {"error": "Inside image does not have required dimensions (1414x1000)"}
 
+    id = generate(size=12)
+    card = Card(
+        RowKey=id,
+        front=True,
+        front_inside=True,
+        back_inside=True,
+        back=True
+    )
+
     # Split inside image into left and right halves
     front_inside = inside_img.crop((0, 0, 707, 1000))
     back_inside = inside_img.crop((707, 0, 1414, 1000))
@@ -88,27 +97,38 @@ async def upload_card(
     back_inside_bytes.seek(0)
     back_bytes.seek(0)
 
-    card_storage.upload_blob(name=f"{card.front}.png", data=front_bytes),
-    card_storage.upload_blob(name=f"{card.front_inside}.png", data=front_inside_bytes),
-    card_storage.upload_blob(name=f"{card.back_inside}.png", data=back_inside_bytes),
-    card_storage.upload_blob(name=f"{card.back}.png", data=back_bytes),
+    card_storage.upload_blob(name=f"{id}_front.png", data=front_bytes)
+    card_storage.upload_blob(name=f"{id}_front_inside.png", data=front_inside_bytes)
+    card_storage.upload_blob(name=f"{id}_back_inside.png", data=back_inside_bytes)
+    card_storage.upload_blob(name=f"{id}_back.png", data=back_bytes)
 
-    session.add(card)
-    session.commit()
-    return {"id": card.id}
+    if audio.filename is not None:
+        if audio.content_type in ["audio/mpeg", "audio/wav"]:
+            card.audio = audio.filename.split('.')[-1]
+            audio_bytes = BytesIO(await audio.read())
+            audio_bytes.seek(0)
+            card_storage.upload_blob(name=f"{id}_audio.{card.audio}", data=audio_bytes)
+        else:
+            return {"error": f"File {audio.filename} is not a valid audio file."}
+    print(card)
+    table.insert_entity(COSMOS_CONTAINER_NAME, card.model_dump())
+
+    return {"id": id}
 
 @app.get("/card/{card_id}")
-async def read_card(card_id: str, session: SessionDep):
-    statement = select(Card).where(Card.id == card_id)
-    card = session.exec(statement).first()
-    if not card:
+async def read_card(card_id: str):
+    try:
+        card = table.get_entity(COSMOS_CONTAINER_NAME,"card",card_id)
+    except Exception as e:
+        logging.error(f"Error reading card: {e}")
         return {"error": "Card not found."}
 
     images = {
-        "front": f"{card_storage.url}/{card.front}.png",
-        "front_inside": f"{card_storage.url}/{card.front_inside}.png",
-        "back_inside": f"{card_storage.url}/{card.back_inside}.png",
-        "back": f"{card_storage.url}/{card.back}.png",
+        "front": f"{card_storage.url}/{card.RowKey}_front.png",
+        "front_inside": f"{card_storage.url}/{card.RowKey}_front_inside.png",
+        "back_inside": f"{card_storage.url}/{card.RowKey}_back_inside.png",
+        "back": f"{card_storage.url}/{card.RowKey}_back.png",
+        "audio": f"{card_storage.url}/{card.RowKey}_audio.{card.audio}" if "audio" in card else None
     }
 
     return images
