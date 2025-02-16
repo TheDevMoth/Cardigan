@@ -1,16 +1,9 @@
 {
   "routes": [
     {
-      "route": "/make",
-      "methods": [
-        "get"
-      ]
-    },
-    {
-      "route": "/card/:id",
-      "methods": [
-        "get"
-      ]
+      "route": "/*",
+      "rewrite": "/index.html",
+      "statusCode": 200
     }
   ],
   "navigationFallback": {
