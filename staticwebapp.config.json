@@ -1,0 +1,13 @@
+{
+  "routes": [
+    {
+      "route": "/card",
+      "methods": [
+        "get"
+      ],
+      "allowedRoles": [
+        "anonymous"
+      ]
+    }
+  ]
+}
