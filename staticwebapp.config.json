@@ -8,6 +8,15 @@
       "allowedRoles": [
         "anonymous"
       ]
+    },
+    {
+      "route": "/make",
+      "methods": [
+        "get"
+      ],
+      "allowedRoles": [
+        "anonymous"
+      ]
     }
   ]
 }
