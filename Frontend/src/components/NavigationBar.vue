@@ -2,7 +2,8 @@
     <nav class="navbar navbar-bg">
         <div class="container-fluid d-flex flex-md-row" ref="mainline">
             <div class="d-flex">
-                <a class="navbar-brand on-navbar" href="#">E-Cards</a>
+                <img class="logo" src="/cardigan.png" alt="logo">
+                <a class="navbar-brand on-navbar" href="#">Cardigan</a>
                 <div class="vr"></div>
                 <ul class="navbar-nav me-auto d-flex flex-row">
                     <li class="nav-item px-4">
@@ -21,7 +22,7 @@
             </div>
         </div>
         <div class="d-flex flex-row w-100 justify-content-center" ref="newline">
-            
+
         </div>
     </nav>
 </template>
@@ -51,7 +52,7 @@ onMounted(() => {
         window.addEventListener('resize', () => {
             breakpoint.value = window.innerWidth > 992;
         });
-        
+
         moveMiddle();
     });
 });
@@ -67,6 +68,9 @@ watch(breakpoint, (newVal) => {
 
 .navbar-brand {
     font-weight: 600;
+    color: #BA181B;
+    font-size: 1.25em;
+    font-family: sans-serif;
 }
 
 .navbar-btn {
@@ -77,7 +81,15 @@ watch(breakpoint, (newVal) => {
     color: #BA181B;
     /* font-weight: 500; */
 }
+
 .navbar-bg {
     background-color: #FFFFFF;
+}
+
+.logo {
+    width: 35px;
+    height: 35px;
+    align-self: center;
+    margin: auto 8px;
 }
 </style>
