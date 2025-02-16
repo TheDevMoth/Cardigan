@@ -206,7 +206,6 @@ function addNode(node: Konva.Shape) {
         element.setDraggable(false);
     });
     tr.nodes([node]);
-    tr.resizeEnabled(!(node.name() == "Text"));
     tr.setZIndex(layer.children.length - 1);
     lineGuideStops = Guides.getLineGuideStops([node], stage, layer, currentPage.value == "inside");
 }
@@ -217,7 +216,7 @@ function addText() {
         fontSize: 30,
         fontFamily: 'Calibri',
         fill: '#000000',
-        name: "Text"
+        name: "Text",
     });
     addNode(text);
 }
@@ -330,7 +329,6 @@ function createStage(page: string): Konva.Stage {
                 element.setDraggable(false);
             });
             transformer.nodes([e.target]);
-            transformer.resizeEnabled(!(e.target.name() == "Text"));
             lineGuideStops = Guides.getLineGuideStops(transformer.nodes() as Konva.Shape[], stage, layer, currentPage.value == "inside");
 
         } else if (metaPressed && isSelected) {
@@ -339,7 +337,6 @@ function createStage(page: string): Konva.Stage {
             if (nodes.length == 0) closeSidebar();
             e.target.setDraggable(false);
             transformer.nodes(nodes);
-            transformer.resizeEnabled(!nodes.some(node => node.name() == "Text"));
             lineGuideStops = Guides.getLineGuideStops(transformer.nodes() as Konva.Shape[], stage, layer, currentPage.value == "inside");
         } else if (metaPressed && !isSelected) {
             e.target.setDraggable(true);
@@ -347,7 +344,6 @@ function createStage(page: string): Konva.Stage {
             if (nodes.length == 1) openOptionsSidebar(e.target);
             else closeSidebar();
             transformer.nodes(nodes);
-            if (e.target.name() == "Text") transformer.resizeEnabled(false);
             lineGuideStops = Guides.getLineGuideStops(transformer.nodes() as Konva.Shape[], stage, layer, currentPage.value == "inside");
         }
     });
@@ -383,27 +379,6 @@ function createStage(page: string): Konva.Stage {
     drawLayer.on('dragend', function (e) {
         drawLayer.find('.guid-line').forEach((l) => l.destroy());
     });
-
-    var text = new Konva.Text({
-        text: `${page} Text`,
-        fontSize: 30,
-        fontFamily: 'Calibri',
-        fill: '#000000',
-        name: "Text"
-    });
-    text.x(newStage.width() / newStage.scaleX() / 2);
-    text.y(newStage.height() / newStage.scaleY() / 2);
-    text.on('mouseover', function () {
-        document.body.style.cursor = 'pointer';
-    });
-    text.on('mouseout', function () {
-        document.body.style.cursor = 'default';
-    });
-    text.on('dragmove', () => {
-        text.x(clamp(text.x(), -text.width(), newStage.width() / newStage.scaleX() + text.height()));
-        text.y(clamp(text.y(), -text.height(), newStage.height() / newStage.scaleY() + text.height()));
-    });
-    drawLayer.add(text);
 
     bgLayer.draw();
     drawLayer.draw();
@@ -697,6 +672,16 @@ onMounted(() => {
             y: clamp(event.clientY - rect.top, 0, stage.height() / stage.scaleY())
         };
     });
+    mainContainer.value?.addEventListener('click', (e) => {
+        if (e.target !== mainContainer.value) return;
+        
+        tr.nodes().forEach(element => {
+            element.setDraggable(false);
+        });
+        closeSidebar();
+        tr.nodes([]);
+        tr.resizeEnabled(true);
+    })
     settingUp.value = false;
 });
 </script>

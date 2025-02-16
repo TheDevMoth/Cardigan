@@ -29,10 +29,10 @@
                         <label class="form-label">Text:</label>
                         <textarea v-model="text" class="form-control" rows="3" @keydown.enter.stop></textarea>
                     </div>
-                    <div v-if="hasProperty('fontSize')" class="col-md-6">
+                    <!-- <div v-if="hasProperty('fontSize')" class="col-md-6">
                         <label class="form-label">Font Size:</label>
                         <input v-model.number="fontSize" type="number" min="1" class="form-control" />
-                    </div>
+                    </div> -->
                     <div v-if="hasProperty('fontFamily')" class="col-md-6">
                         <label class="form-label">Font Family:</label>
                         <select v-model="fontFamily" class="form-select">
@@ -41,6 +41,14 @@
                             <option value="Verdana">Verdana</option>
                             <option value="Courier New">Courier New</option>
                             <option value="Calibri">Calibri</option>
+                        </select>
+                    </div>
+                    <div v-if="hasProperty('align')" class="col-md-6">
+                        <label class="form-label">Font Alignment:</label>
+                        <select v-model="align" class="form-select">
+                            <option value="left">Left</option>
+                            <option value="center">Center</option>
+                            <option value="right">Right</option>
                         </select>
                     </div>
                     <div v-if="hasProperty('numPoints')" class="col-md-6">
@@ -91,7 +99,7 @@ const properties: Record<string, string[]> = {
     Circle: ['stroke', 'strokeWidth', 'fill', 'fillEnabled', 'opacity'],
     Image: ['opacity'],
     Emoji: ['opacity'],
-    Text: ['text', 'fontSize', 'fontFamily', 'fill', 'opacity'],
+    Text: ['text', 'fontFamily', 'fill', 'opacity', 'align'],
     Star: ['stroke', 'strokeWidth', 'fill', 'fillEnabled', 'opacity', 'numPoints', 'innerRadius', 'outerRadius'],
     Triangle: ['stroke', 'strokeWidth', 'fill', 'fillEnabled', 'opacity'],
     Heart: ['stroke', 'strokeWidth', 'fill', 'fillEnabled', 'opacity', 'innerRadius', 'bottomSharpness'],
@@ -105,8 +113,9 @@ const stroke = ref(props.shape.stroke() || '#000000');
 const strokeWidth = ref(props.shape.strokeWidth() || 1);
 const opacity = ref(props.shape.opacity() || 1);
 const text = ref((props.shape as Konva.Text).text?.() || '');
-const fontSize = ref((props.shape as Konva.Text).fontSize?.() || 16);
+// const fontSize = ref((props.shape as Konva.Text).fontSize?.() || 16);
 const fontFamily = ref((props.shape as Konva.Text).fontFamily?.() || 'Arial');
+const align = ref((props.shape as Konva.Text).align?.() || 'left');
 const numPoints = ref((props.shape as Konva.Star).numPoints?.() || 5);
 const innerRadius = ref((props.shape as Konva.Star).innerRadius?.() || 10);
 const outerRadius = ref((props.shape as Konva.Star).outerRadius?.() || 20);
@@ -119,7 +128,7 @@ const updateShape = () => {
     if (!props.shape) return;
     zIndex.value = clamp(zIndex.value, 0, props.shape.getLayer()!.children.length-2);
     opacity.value = clamp(opacity.value, 0, 1);
-    fontSize.value = clamp(fontSize.value, 1, 100);
+    // fontSize.value = clamp(fontSize.value, 1, 100);
     numPoints.value = clamp(numPoints.value, 1, 32);
     innerRadius.value = clamp(innerRadius.value, 0, 100);
     outerRadius.value = clamp(outerRadius.value, 0, 100);
@@ -130,8 +139,9 @@ const updateShape = () => {
     if (hasProperty('strokeWidth')) props.shape.strokeWidth(strokeWidth.value);
     if (hasProperty('opacity')) props.shape.opacity(opacity.value);
     if (hasProperty('text')) (props.shape as Konva.Text).text(text.value);
-    if (hasProperty('fontSize')) (props.shape as Konva.Text).fontSize(fontSize.value);
+    // if (hasProperty('fontSize')) (props.shape as Konva.Text).fontSize(fontSize.value);
     if (hasProperty('fontFamily')) (props.shape as Konva.Text).fontFamily(fontFamily.value);
+    if (hasProperty('align')) (props.shape as Konva.Text).align(align.value);
     if (hasProperty('numPoints')) (props.shape as Konva.Star).numPoints(numPoints.value);
     if (hasProperty('innerRadius')) (props.shape as Konva.Star).innerRadius(innerRadius.value);
     if (hasProperty('outerRadius')) (props.shape as Konva.Star).outerRadius(outerRadius.value);
@@ -142,7 +152,7 @@ const updateShape = () => {
     props.shape.getLayer()?.batchDraw();
 };
 
-watch([fill, stroke, strokeWidth, opacity, text, fontSize, fontFamily, numPoints, innerRadius, outerRadius, zIndex, fillEnabled, bottomSharpness, sides], () => {
+watch([fill, stroke, strokeWidth, opacity, text, fontFamily, numPoints, innerRadius, outerRadius, zIndex, fillEnabled, bottomSharpness, sides, align], () => {
     updateShape();
 });
 
@@ -152,8 +162,9 @@ watch(() => props.shape, (newShape) => {
     strokeWidth.value = newShape.strokeWidth() || 1;
     opacity.value = newShape.opacity() || 1;
     text.value = (newShape as Konva.Text).text?.() || '';
-    fontSize.value = (newShape as Konva.Text).fontSize?.() || 16;
+    // fontSize.value = (newShape as Konva.Text).fontSize?.() || 16;
     fontFamily.value = (newShape as Konva.Text).fontFamily?.() || 'Arial';
+    align.value = (newShape as Konva.Text).align?.() || 'left';
     numPoints.value = (newShape as Konva.Star).numPoints?.() || 5;
     innerRadius.value = (newShape as Konva.Star).innerRadius?.() || 10;
     outerRadius.value = (newShape as Konva.Star).outerRadius?.() || 20;
