@@ -12,5 +12,8 @@
         "get"
       ]
     }
-  ]
+  ],
+  "navigationFallback": {
+    "rewrite": "/index.html"
+  }
 }
