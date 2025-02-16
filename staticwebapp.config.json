@@ -10,9 +10,6 @@
       "route": "/card/:id",
       "methods": [
         "get"
-      ],
-      "allowedRoles": [
-        "anonymous"
       ]
     }
   ]
