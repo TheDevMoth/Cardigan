@@ -3,14 +3,14 @@
         <div class="container-fluid d-flex flex-md-row" ref="mainline">
             <div class="d-flex">
                 <img class="logo" src="/cardigan.png" alt="logo">
-                <a class="navbar-brand on-navbar" href="#">Cardigan</a>
+                <router-link to="/" class="navbar-brand on-navbar" >Cardigan</router-link>
                 <div class="vr"></div>
                 <ul class="navbar-nav me-auto d-flex flex-row">
                     <li class="nav-item px-4">
-                        <a class="nav-link on-navbar" :class="{ active: route.path === '/' }" href="/">Home</a>
+                        <router-link to="/" class="nav-link on-navbar" :class="{ active: route.path === '/' }">Home</router-link>
                     </li>
                     <li class="nav-item px-3">
-                        <a class="nav-link on-navbar" :class="{ active: route.path === '/make' }" href="/make">Make</a>
+                        <router-link to="/make" class="nav-link on-navbar" :class="{ active: route.path === '/make' }">Make</router-link>
                     </li>
                 </ul>
             </div>
