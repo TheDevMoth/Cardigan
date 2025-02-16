@@ -121,6 +121,7 @@ import { clamp } from '@/scripts/Utils';
 import type { Vector2d } from 'konva/lib/types';
 import jsPDF from 'jspdf';
 import axios from 'axios';
+import { API_BASE_URL } from '@/scripts/Constants';
 
 function openOptionsSidebar(selectedItem: any) {
     if (sidebarSlot.value && sidebarSlot.value.hasChildNodes()) {
@@ -489,7 +490,7 @@ async function shareCard() {
     }
 
     try {
-        const result = await axios.post("/api/card/", formData, {
+        const result = await axios.post(`${API_BASE_URL}/card/`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data'
             }

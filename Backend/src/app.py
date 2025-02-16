@@ -38,7 +38,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["https://cardiganstorage.z6.web.core.windows.net"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -19,7 +19,7 @@
                     <h1>{{ error }}</h1>
                 </div>
                 <div v-else>
-                    <h1>Please, wait while we retrieve you card</h1>
+                    <h1>Please, wait while we retrieve your card..</h1>
                 </div>
             </div>
         </div>
@@ -38,6 +38,7 @@
 
 <script setup>
 import NavigationBar from '@/components/NavigationBar.vue';
+import { API_BASE_URL } from '@/scripts/Constants';
 import axios from 'axios';
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
@@ -68,7 +69,7 @@ onMounted(async () => {
     adjustContainerSize();
     window.addEventListener('resize', adjustContainerSize);
     
-    await axios.get(`/api/card/${cardId}`).then((result) => {
+    await axios.get(`${API_BASE_URL}/card/${cardId}`).then((result) => {
         frontImage.value = result.data["front"];
         frontInsideImage.value = result.data["front_inside"];
         backInsideImage.value = result.data["back_inside"];
