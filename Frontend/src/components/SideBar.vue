@@ -1,6 +1,9 @@
 <template>
+    <button class="btn expander" @click="unHideSidebar" :class="{hidden: !sidebarUsed}">
+      <i class="bi bi-arrow-right" style="font-size: 1.5rem; color: #161A1D"/>
+    </button>
     <div :class="['sidebar', { expanded: isExpanded }]">
-        <button class="collapseButton" :onclick="retractSidebar"><i class="bi bi-arrow-left" style="font-size: 1.5rem; color: #161A1D"/></button>
+        <button class="collapseButton" :onclick="hideSidebar"><i class="bi bi-arrow-left" style="font-size: 1.5rem; color: #161A1D"/></button>
         <div class="content">
             <slot></slot>
         </div>
@@ -10,25 +13,55 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 const isExpanded = ref(false);
+const hidden = ref(false);
+const sidebarUsed = ref(false);
 
-function toggleSidebar() {
-    isExpanded.value = !isExpanded;
-}
 function expandSidebar() {
+    if (!hidden.value) isExpanded.value = true;
+    
+    sidebarUsed.value = true;
+}
+function forceExpandSidebar() {
     isExpanded.value = true;
+    sidebarUsed.value = true;
 }
 function retractSidebar() {
+    sidebarUsed.value = false;
     isExpanded.value = false;
+    
 }
-
+function hideSidebar() {
+    isExpanded.value = false;
+    hidden.value = true;
+}
+function unHideSidebar() {
+    isExpanded.value = true;
+    hidden.value = false;
+}
 defineExpose({
-    toggleSidebar,
     expandSidebar,
     retractSidebar,
+    forceExpandSidebar
 });
 </script>
 
 <style scoped>
+.expander {
+    position: absolute;
+    left: 0;
+    top: 0;
+    padding: 6px 12px;
+    margin-top: 6px;
+    border: 1px solid #dbd5d4;
+    border-left: 0px;
+    background: white;
+    cursor: pointer;
+    border-radius: 0 12px 12px 0;
+    transition: left 0.3s;
+}
+.hidden {
+    left: -50px
+}
 .sidebar {
     position: absolute;
     left: 0;

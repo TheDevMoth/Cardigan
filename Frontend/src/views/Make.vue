@@ -4,21 +4,21 @@
             <NavigationBar>
                 <template #middle>
                     <div class="btn-group" role="group">
-                        <button type="button" class="btn me-xl-3 align-items-center d-flex py-0" @click="addText">
+                        <button type="button" class="btn me-sm-4 me-lg-2 me-xl-4 px-1 align-items-center d-flex py-0" @click="addText">
                             <i class="bi bi-textarea-t px-2 my-0" style="font-size: 1.5rem" />
                             <span>Add Text</span>
                         </button>
-                        <button type="button" class="btn me-xl-3 align-items-center d-flex py-0"
+                        <button type="button" class="btn me-sm-4 me-lg-2 me-xl-4 px-1 align-items-center d-flex py-0"
                             @click="openShapesSidebar">
                             <i class="bi bi-plus-square-dotted px-2 my-0" style="font-size: 1.5rem" />
                             <span>Add Shape</span>
                         </button>
-                        <button type="button" class="btn me-xl-3 align-items-center d-flex py-0"
+                        <button type="button" class="btn me-sm-4 me-lg-2 me-xl-4 px-1 align-items-center d-flex py-0"
                             @click="openEmojiSidebar">
                             <i class="bi bi-emoji-wink px-2 my-0" style="font-size: 1.5rem" />
                             <span>Add Emoji</span>
                         </button>
-                        <button type="button" class="btn align-items-center d-flex py-0" @click="fileInput?.click()">
+                        <button type="button" class="btn align-items-center d-flex py-0 px-1" @click="fileInput?.click()">
                             <i class="bi bi-image px-2 my-0" style="font-size: 1.5rem" />
                             <span>Add Image</span>
                         </button>
@@ -44,16 +44,16 @@
                         <h1 class="modal-title fs-5" id="doneModalLabel">Share Options</h1>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="modal-body">
+                    <div class="modal-body p-0">
                         <div class="list-group">
-                            <button type="button" class="list-group-item list-group-item-action" data-bs-target="#shareModal" data-bs-toggle="modal" @click="shareCard">
+                            <button type="button" class="list-group-item list-group-item-action py-3" data-bs-target="#shareModal" data-bs-toggle="modal" @click="shareCard">
                                 Share as Cardigan card (url)
                             </button>
-                            <button type="button" class="list-group-item list-group-item-action"
+                            <button type="button" class="list-group-item list-group-item-action py-3"
                                 @click="downloadImages">
                                 Download as Images
                             </button>
-                            <button type="button" class="list-group-item list-group-item-action" @click="downloadPDF">
+                            <button type="button" class="list-group-item list-group-item-action py-3" @click="downloadPDF">
                                 Download as PDF
                             </button>
                         </div>
@@ -156,7 +156,7 @@ function openShapesSidebar() {
         render(shapeCreateVNode, sidebarSlot.value);
     } else console.error("sidebar slot is not there");
 
-    sidebar.value?.expandSidebar()
+    sidebar.value?.forceExpandSidebar()
 }
 
 function openEmojiSidebar() {
@@ -170,7 +170,7 @@ function openEmojiSidebar() {
         render(emojiCreateVNode, sidebarSlot.value);
     } else console.error("sidebar slot is not there");
 
-    sidebar.value?.expandSidebar()
+    sidebar.value?.forceExpandSidebar()
 }
 
 function closeSidebar() {
@@ -393,7 +393,6 @@ function switchPage(page: string) {
         });
         closeSidebar();
         tr.nodes([]);
-        tr.resizeEnabled(true);
     }
     currentPage.value = page;
     stage = stageMap.get(page)!;
@@ -409,8 +408,8 @@ function fitStageIntoParentContainer() {
     if (!mainContainer.value) return;
     var container = mainContainer.value;
 
-    var containerWidth = container.offsetWidth - 50;
-    var containerHeight = container.offsetHeight - 50;
+    var containerWidth = container.offsetWidth - 32;
+    var containerHeight = container.offsetHeight - 150;
 
     var scaleX = containerWidth / pageSizes[currentPage.value].width;
     var scaleY = containerHeight / pageSizes[currentPage.value].height;
@@ -591,7 +590,6 @@ const pageSizes: { [key: string]: { width: number; height: number } } = {
 }
 
 const currentPage = ref("front");
-const settingUp = ref(true);
 const stageMap = new Map<string, Konva.Stage>();
 const fileInput = useTemplateRef("fileInput");
 const sidebar = useTemplateRef("sidebar");
@@ -683,7 +681,6 @@ onMounted(() => {
         tr.nodes([]);
         tr.resizeEnabled(true);
     })
-    settingUp.value = false;
 });
 </script>
 
@@ -710,6 +707,7 @@ onMounted(() => {
 
 .canvas-container {
     box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 70px;
 }
 
 footer {
