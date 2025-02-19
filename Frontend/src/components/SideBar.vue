@@ -2,7 +2,7 @@
     <button class="btn expander" @click="unHideSidebar" :class="{hidden: !sidebarUsed}">
       <i class="bi bi-arrow-right" style="font-size: 1.5rem; color: #161A1D"/>
     </button>
-    <div :class="['sidebar', { expanded: isExpanded }]">
+    <div class="sidebar" :class="{ expanded: isExpanded }">
         <button class="collapseButton" :onclick="hideSidebar"><i class="bi bi-arrow-left" style="font-size: 1.5rem; color: #161A1D"/></button>
         <div class="content">
             <slot></slot>
@@ -18,7 +18,6 @@ const sidebarUsed = ref(false);
 
 function expandSidebar() {
     if (!hidden.value) isExpanded.value = true;
-    
     sidebarUsed.value = true;
 }
 function forceExpandSidebar() {
@@ -74,7 +73,7 @@ defineExpose({
     z-index: 1000;
 }
 
-.sidebar.expanded {
+.expanded {
     width: 400px;
     border: 0px;
     border-right: 1px;

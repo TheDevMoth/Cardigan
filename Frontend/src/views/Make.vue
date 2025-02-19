@@ -36,57 +36,19 @@
             </NavigationBar>
         </header>
 
-        <!-- Modal -->
-        <div class="modal fade" id="doneModal" tabindex="-1" aria-labelledby="doneModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h1 class="modal-title fs-5" id="doneModalLabel">Share Options</h1>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body p-0">
-                        <div class="list-group">
-                            <button type="button" class="list-group-item list-group-item-action py-3" data-bs-target="#shareModal" data-bs-toggle="modal" @click="shareCard">
-                                Share as Cardigan card (url)
-                            </button>
-                            <button type="button" class="list-group-item list-group-item-action py-3"
-                                @click="downloadImages">
-                                Download as Images
-                            </button>
-                            <button type="button" class="list-group-item list-group-item-action py-3" @click="downloadPDF">
-                                Download as PDF
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="modal fade" id="shareModal" data-bs-backdrop="static" aria-hidden="true" aria-labelledby="shareModalLabel" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h1 class="modal-title fs-5" id="shareModalLabel">{{ resultsReceived ? "Here is the link to your card" : "Your card is being created" }}</h1>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" @click="closeShareModal"></button>
-                </div>
-                <div class="modal-body">
-                    <span v-if="resultsReceived">
-                        {{ results }}
-                    </span>
-                    <div v-else>
-                        This is supposed to be a loading bar...
-                    </div>
-                </div>
-            </div>
-        </div>
-        </div>
+        <DoneModal @share-card="shareCard" 
+            @close-share-modal="closeShareModal" 
+            @download-images="downloadImages" 
+            @download-p-d-f="downloadPDF"
+            ref="done-modal"
+        />
+        <!-- <CardModal @card-selected="handleCardTypeSelected" ref="cardModal" /> -->
+        
         <div style="position:relative">
             <main class="main-container" ref="main-container">
-                <div :style="{ display: currentPage === 'front' ? 'block' : 'none' }" class="canvas-container"
-                    id="canvas-container-front" ref="canvas-container-front"></div>
-                <div :style="{ display: currentPage === 'inside' ? 'block' : 'none' }" class="canvas-container"
-                    id="canvas-container-inside" ref="canvas-container-inside"></div>
-                <div :style="{ display: currentPage === 'back' ? 'block' : 'none' }" class="canvas-container"
-                    id="canvas-container-back" ref="canvas-container-back"></div>
+                <div ref="frontCanvasContainer"></div>
+                <div ref="insideCanvasContainer"></div>
+                <div ref="backCanvasContainer"></div>
             </main>
             <SideBar ref="sidebar">
                 <div ref="sidebarSlot"></div>
@@ -109,15 +71,15 @@
 </template>
 
 <script setup lang="ts">
-import { createVNode, nextTick, onMounted, ref, render, useTemplateRef } from 'vue';
+import { createVNode, h, nextTick, onMounted, ref, render, useTemplateRef, type VNode } from 'vue';
 import NavigationBar from '@/components/NavigationBar.vue';
 import SideBar from '@/components/SideBar.vue';
 import ShapeOptions from '@/components/ShapeOptions.vue';
 import ShapeCreate from '@/components/ShapeCreate.vue';
 import EmojiCreate from '@/components/EmojiCreate.vue';
+import Canvas from '@/components/Canvas.vue';
+import DoneModal from '@/components/DoneModal.vue';
 import Konva from 'konva';
-import * as Guides from '@/scripts/Guides';
-import { clamp } from '@/scripts/Utils';
 import type { Vector2d } from 'konva/lib/types';
 import jsPDF from 'jspdf';
 import axios from 'axios';
@@ -132,16 +94,16 @@ function openOptionsSidebar(selectedItem: any) {
         return;
     }
     const shapeOptionsVNode = createVNode(ShapeOptions, { shape: selectedItem });
-
+    
     shapeOptionsVNode.props = {
         shape: selectedItem,
         onDelete: deleteSelected
     };
-
+    
     if (sidebarSlot.value) {
         render(shapeOptionsVNode, sidebarSlot.value);
     } else console.error("sidebar slot is not there");
-
+    
     sidebar.value?.expandSidebar();
 }
 
@@ -149,7 +111,7 @@ function openShapesSidebar() {
     const shapeCreateVNode = createVNode(ShapeCreate);
 
     shapeCreateVNode.props = {
-        onShapeSelected: addNode
+        onShapeSelected: currentCanvas!.addNode
     };
 
     if (sidebarSlot.value) {
@@ -163,7 +125,7 @@ function openEmojiSidebar() {
     const emojiCreateVNode = createVNode(EmojiCreate);
 
     emojiCreateVNode.props = {
-        onEmojiSelected: addNode
+        onEmojiSelected: currentCanvas!.addNode
     };
 
     if (sidebarSlot.value) {
@@ -181,34 +143,7 @@ function closeSidebar() {
 }
 
 function deleteSelected() {
-    closeSidebar();
-    tr.nodes().forEach((item) => item.destroy());
-    tr.nodes([]);
-    layer.batchDraw();
-}
-
-function addNode(node: Konva.Shape) {
-    node.x(stage.width() / stage.scaleX() / 2);
-    node.y(stage.height() / stage.scaleY() / 2);
-    node.on('mouseover', function () {
-        document.body.style.cursor = 'pointer';
-    });
-    node.on('mouseout', function () {
-        document.body.style.cursor = 'default';
-    });
-    node.on('dragmove', () => {
-        node.x(clamp(node.x(), -node.width(), stage.width() / stage.scaleX() + node.height()));
-        node.y(clamp(node.y(), -node.height(), stage.height() / stage.scaleY() + node.height()));
-    });
-    layer.add(node);
-    openOptionsSidebar(node);
-    node.setDraggable(true);
-    tr.nodes().forEach(element => {
-        element.setDraggable(false);
-    });
-    tr.nodes([node]);
-    tr.setZIndex(layer.children.length - 1);
-    lineGuideStops = Guides.getLineGuideStops([node], stage, layer, currentPage.value == "inside");
+    currentCanvas?.deleteSelected();
 }
 
 function addText() {
@@ -219,32 +154,11 @@ function addText() {
         fill: '#000000',
         name: "Text",
     });
-    addNode(text);
+    currentCanvas?.addNode(text);
 }
 
 function addImage(img: HTMLImageElement) {
-    const landscape = img.width > img.height;
-    const maxWidth = Math.min(img.width, pageSizes[currentPage.value].width);
-    const maxHeight = Math.min(img.height, pageSizes[currentPage.value].height);
-    const scaleX = maxWidth / img.width;
-    const scaleY = maxHeight / img.height;
-    const scale = Math.min(scaleX, scaleY);
-
-    const imageNode = new Konva.Image({
-        image: img,
-        width: img.width * scale,
-        height: img.height * scale,
-    });
-
-    var newScale = 1;
-    if (imageNode.width() > stage.width() / stage.scaleX() / 2 && landscape) {
-        newScale = (stage.width() / stage.scaleX() / 2) / imageNode.width();
-    } else if (imageNode.height() > stage.height() / stage.scaleY() / 2 && !landscape) {
-        newScale = (stage.height() / stage.scaleY() / 2) / imageNode.height();
-    }
-    imageNode.scaleY(newScale);
-    imageNode.scaleX(newScale);
-    addNode(imageNode);
+    currentCanvas?.addImage(img);
 }
 
 function handleFileUpload(event: Event) {
@@ -272,132 +186,12 @@ function handleFileUpload(event: Event) {
     }
 }
 
-function createStage(page: string): Konva.Stage {
-    var size = pageSizes[page];
-    const newStage = new Konva.Stage({
-        container: `canvas-container-${page}`,
-        width: Math.min(size.width),
-        height: Math.min(size.height)
-    });
-    const bgLayer = new Konva.Layer();
-    bgLayer.add(new Konva.Rect({
-        fill: '#FFFFFF',
-        x: 0,
-        y: 0,
-        width: size.width,
-        height: size.height
-    }))
-    if (page == "inside") {
-        bgLayer.add(new Konva.Line({
-            points: [size.width / 2, 0, size.width / 2, size.height],
-            stroke: '#D3D3D3',
-            strokeWidth: 1
-        }));
-    }
-    newStage.add(bgLayer);
-    const drawLayer = new Konva.Layer();
-    newStage.add(drawLayer);
-    const transformer = new Konva.Transformer();
-    transformer.flipEnabled(true);
-    transformer.rotationSnaps([0, 45, 90, 135, 180, 225, 270, 315]);
-    transformer.rotationSnapTolerance(3);
-
-    drawLayer.add(transformer);
-
-    // selection handling 
-    newStage.on('click tap', function (e) {
-        // Remove all selections
-        if (e.target instanceof Konva.Stage || e.target.getLayer() === bgLayer) {
-            transformer.nodes().forEach(element => {
-                element.setDraggable(false);
-            });
-            closeSidebar();
-            transformer.nodes([]);
-            transformer.resizeEnabled(true);
-            return;
-        }
-        if (e.target.getLayer() !== layer) {
-            return;
-        }
-        // Select or unselect elements
-        const metaPressed = e.evt.ctrlKey || e.evt.metaKey;
-        const isSelected = transformer.nodes().indexOf(e.target) >= 0;
-
-        if (!metaPressed && !isSelected) {
-            openOptionsSidebar(e.target);
-            e.target.setDraggable(true);
-            transformer.nodes().forEach(element => {
-                element.setDraggable(false);
-            });
-            transformer.nodes([e.target]);
-            lineGuideStops = Guides.getLineGuideStops(transformer.nodes() as Konva.Shape[], stage, layer, currentPage.value == "inside");
-
-        } else if (metaPressed && isSelected) {
-            const nodes = transformer.nodes().slice();
-            nodes.splice(nodes.indexOf(e.target), 1);
-            if (nodes.length == 0) closeSidebar();
-            e.target.setDraggable(false);
-            transformer.nodes(nodes);
-            lineGuideStops = Guides.getLineGuideStops(transformer.nodes() as Konva.Shape[], stage, layer, currentPage.value == "inside");
-        } else if (metaPressed && !isSelected) {
-            e.target.setDraggable(true);
-            const nodes = transformer.nodes().concat([e.target]);
-            if (nodes.length == 1) openOptionsSidebar(e.target);
-            else closeSidebar();
-            transformer.nodes(nodes);
-            lineGuideStops = Guides.getLineGuideStops(transformer.nodes() as Konva.Shape[], stage, layer, currentPage.value == "inside");
-        }
-    });
-    drawLayer.on('dragmove', function (e) {
-        if (!(e.target instanceof Konva.Shape)) return;
-
-        // clear all previous lines on the screen
-        drawLayer.find('.guid-line').forEach((l) => l.destroy());
-
-        var itemBounds = Guides.getObjectSnappingEdges(tr.nodes() as Konva.Shape[], e.target);
-        var guides = Guides.getGuides(lineGuideStops, itemBounds);
-
-        if (!guides.length) return;
-        Guides.drawGuides(guides, layer);
-
-        var absPos = e.target.absolutePosition();
-        guides.forEach((lg) => {
-            switch (lg.orientation) {
-                case 'V': {
-                    absPos.x = lg.lineGuide + lg.offset;
-                    break;
-                }
-                case 'H': {
-                    absPos.y = lg.lineGuide + lg.offset;
-                    break;
-                }
-            }
-        });
-
-        e.target.absolutePosition(absPos);
-    });
-
-    drawLayer.on('dragend', function (e) {
-        drawLayer.find('.guid-line').forEach((l) => l.destroy());
-    });
-
-    bgLayer.draw();
-    drawLayer.draw();
-    return newStage;
-}
-
 function switchPage(page: string) {
-    if (tr) {
-        tr.nodes().forEach(element => {
-            element.setDraggable(false);
-        });
-        closeSidebar();
-        tr.nodes([]);
-    }
+    currentCanvas?.deselectThisCanvas();
+    
     currentPage.value = page;
-    stage = stageMap.get(page)!;
-    layer = stage.getLayers()[1];
-    tr = layer.getChildren().find((child) => child instanceof Konva.Transformer) as Konva.Transformer;
+    currentCanvas = canvasMap.get(page)!;
+    currentCanvas?.selectThisCanvas();
 
     nextTick(() => {
         fitStageIntoParentContainer();
@@ -416,76 +210,15 @@ function fitStageIntoParentContainer() {
 
     var scale = Math.min(scaleX, scaleY, 1);
 
-    stage.width(pageSizes[currentPage.value].width * scale);
-    stage.height(pageSizes[currentPage.value].height * scale);
-
-    stage.scaleX(scale);
-    stage.scaleY(scale);
-}
-
-function stageToImage(page: string) {
-    if (!["front", "inside", "back"].includes(page)) return;
-
-    const lStage = stageMap.get(page)!;
-    const ogWidth = lStage.width();
-    const ogHeight = lStage.height();
-    const ogScale = lStage.scale();
-
-    lStage.width(pageSizes[page].width)
-        .height(pageSizes[page].height)
-        .scale({ x: 1, y: 1 });
-    lStage.batchDraw();
-
-    const result = lStage.toDataURL({
-        pixelRatio: 1,
-        mimeType: 'image/png',
-        quality: 1
-    });
-
-    lStage.width(ogWidth)
-        .height(ogHeight)
-        .scale(ogScale);
-    lStage.batchDraw();
-
-    return result;
-}
-async function stageToBlob(page: string) {
-    if (!["front", "inside", "back"].includes(page)) return;
-
-    const lStage = stageMap.get(page)!;
-    const ogWidth = lStage.width();
-    const ogHeight = lStage.height();
-    const ogScale = lStage.scale();
-
-    lStage.width(pageSizes[page].width)
-        .height(pageSizes[page].height)
-        .scale({ x: 1, y: 1 });
-    lStage.batchDraw();
-
-    const result = await lStage.toBlob({
-        pixelRatio: 1,
-        mimeType: 'image/png',
-        quality: 1
-    });
-
-    lStage.width(ogWidth)
-        .height(ogHeight)
-        .scale(ogScale);
-    lStage.batchDraw();
-
-    return result;
+    currentCanvas?.fitStageIntoParentContainer(scale);
 }
 async function shareCard() {
     waitingForResult = true;
     
     const formData = new FormData();
-    const pages = ['front', 'inside', 'back'];
-    
-    for (const page of pages) {
-        const blob = await stageToBlob(page).then(blob => blob as Blob);
-        if (blob) {
-            formData.append(page, blob, `${page}.png`);
-        }
+    for (const page in canvasMap.keys()) {
+        const blob = await canvasMap.get(page)!.toBlob().then(blob => blob as Blob);
+        if (blob) formData.append(page, blob, `${page}.png`);
     }
 
     try {
@@ -496,19 +229,17 @@ async function shareCard() {
         });
         
         if (!waitingForResult) return;
-        resultsReceived.value = true;
-        results.value = `${window.location.origin}/card/${result.data.id}`;
+        doneModal.value?.updateResults(`${window.location.origin}/card/${result.data.id}`);
     } catch (error: any) {
         if (!waitingForResult) return;
-        results.value = `Error: ${error.message}`;
-        resultsReceived.value = true;
+        doneModal.value?.updateResults(`Error: ${error.message}`);
     } finally {
         waitingForResult = false;
     }
 }
 function downloadImages() {
-    stageMap.forEach((stage, page) => {
-        const dataURL = stageToImage(page);
+    canvasMap.forEach((canvas, page) => {
+        const dataURL = canvas.toImage();
         if (!dataURL) return;
 
         const link = document.createElement('a');
@@ -527,15 +258,15 @@ function downloadPDF() {
         format: [1000, 1414]
     });
 
-    const frontImg = stageToImage('front');
-    const backImg = stageToImage('back');
+    const frontImg = canvasMap.get('front')?.toImage();
+    const backImg = canvasMap.get('back')?.toImage();
     if (frontImg && backImg) {
-        const frontStage = stageMap.get('front')!;
-        frontStage.find('Text').forEach((text) => {
+        const frontCanvas = canvasMap.get('front')!;
+        frontCanvas!.stage().find('Text').forEach((text) => {
             var kText = text as Konva.Text;
-            const size = kText.fontSize() / 0.75;
+            const size = kText.fontSize() * kText.scaleX();
             pdf.setFontSize(size);
-            pdf.text(kText.text(), kText.x() * kText.scaleX(), kText.y() * kText.scaleY(), {
+            pdf.text(kText.text(), kText.x(), kText.y(), {
                 baseline: 'top',
                 angle: -kText.getAbsoluteRotation(),
             });
@@ -543,8 +274,8 @@ function downloadPDF() {
 
         pdf.addImage(frontImg, 'PNG', 0, 0, 707, 1000);
 
-        const backStage = stageMap.get('back')!;
-        backStage.find('Text').forEach((text) => {
+        const backCanvas = canvasMap.get('back')!;
+        backCanvas.stage().find('Text').forEach((text) => {
             var kText = text as Konva.Text;
             const size = kText.fontSize() / 0.75;
             pdf.setFontSize(size);
@@ -559,10 +290,10 @@ function downloadPDF() {
 
     // Second page: Inside
     pdf.addPage([1000, 1414]);
-    const insideImg = stageToImage('inside');
+    const insideImg = canvasMap.get('inside')?.toImage();
     if (insideImg) {
-        const insideStage = stageMap.get('inside')!;
-        insideStage.find('Text').forEach((text) => {
+        const insideCanvas = canvasMap.get('inside')!;
+        insideCanvas.stage().find('Text').forEach((text) => {
             var kText = text as Konva.Text;
             const size = kText.fontSize() / 0.75;
             pdf.setFontSize(size);
@@ -577,10 +308,14 @@ function downloadPDF() {
 
     pdf.save('greeting_card.pdf');
 }
+function updatePastePoint(x: number, y: number){
+    pastePoint = {x: x, y: y}
+}
 function closeShareModal() {
-    resultsReceived.value = false;
     waitingForResult = false;
-    results.value = "";
+}
+function handleCardTypeSelected() {
+
 }
 
 const pageSizes: { [key: string]: { width: number; height: number } } = {
@@ -590,96 +325,63 @@ const pageSizes: { [key: string]: { width: number; height: number } } = {
 }
 
 const currentPage = ref("front");
-const stageMap = new Map<string, Konva.Stage>();
+var currentCanvas: InstanceType<typeof Canvas> | null = null;
+const canvasMap = new Map<string, InstanceType<typeof Canvas>>();
+const vNodeMap = new Map<string, VNode>()
 const fileInput = useTemplateRef("fileInput");
 const sidebar = useTemplateRef("sidebar");
 const sidebarSlot = useTemplateRef("sidebarSlot");
 const mainContainer = useTemplateRef("main-container");
+const doneModal = useTemplateRef("done-modal");
 var copiedShapes: Konva.Node[] = [];
 var pastePoint: Vector2d;
 
-var lineGuideStops: ReturnType<typeof Guides.getLineGuideStops>;
-var stage: Konva.Stage;
-var layer: Konva.Layer;
-var tr: Konva.Transformer;
+const frontCanvasContainer = useTemplateRef("frontCanvasContainer");
+const insideCanvasContainer = useTemplateRef("insideCanvasContainer");
+const backCanvasContainer = useTemplateRef("backCanvasContainer");
 
-const resultsReceived = ref(false);
 var waitingForResult = false;
-const results = ref("");
+
 
 onMounted(() => {
-    stageMap.set("front", createStage("front"));
-    stageMap.set("inside", createStage("inside"));
-    stageMap.set("back", createStage("back"));
-    switchPage('front');
+    var frontCanvas = h(Canvas, {page: "front", onOpenOptions: openOptionsSidebar, onCloseOptions: closeSidebar, onUpdatePastePoint: updatePastePoint});
+    if (frontCanvasContainer.value) render(frontCanvas, frontCanvasContainer.value);
+    vNodeMap.set("front", frontCanvas);
+    var insideCanvas = h(Canvas, {page: "inside", onOpenOptions: openOptionsSidebar, onCloseOptions: closeSidebar, onUpdatePastePoint: updatePastePoint});
+    if (insideCanvasContainer.value) render(insideCanvas, insideCanvasContainer.value);
+    vNodeMap.set("inside", insideCanvas);
+    var backCanvas = h(Canvas, {page: "back", onOpenOptions: openOptionsSidebar, onCloseOptions: closeSidebar, onUpdatePastePoint: updatePastePoint});
+    if (backCanvasContainer.value) render(backCanvas, backCanvasContainer.value);
+    vNodeMap.set("back", backCanvas);
 
-    fitStageIntoParentContainer();
-    window.addEventListener('resize', fitStageIntoParentContainer);
-    window.addEventListener('keydown', (event) => {
-        if (event.key === 'Delete') {
-            deleteSelected();
-        } else if ((event.key === 'c' || event.key === 'C') && event.ctrlKey) {
-            copiedShapes = tr.nodes();
-            var midpoint = { x: 10, y: 10 };
-            copiedShapes.forEach((shape) => {
-                midpoint.x += shape.x();
-                midpoint.y += shape.y();
-            });
-            midpoint.x /= copiedShapes.length;
-            midpoint.y /= copiedShapes.length;
-            pastePoint = midpoint;
-        } else if ((event.key === 'v' || event.key === 'V') && event.ctrlKey) {
-            var midpoint = { x: 0, y: 0 };
-            copiedShapes.forEach((shape) => {
-                midpoint.x += shape.x();
-                midpoint.y += shape.y();
-            });
-            midpoint.x /= copiedShapes.length;
-            midpoint.y /= copiedShapes.length;
-            const newSelect: Konva.Shape[] = [];
-            copiedShapes.forEach((shape) => {
-                var clone = shape.clone();
-                clone.x(pastePoint.x + shape.x() - midpoint.x);
-                clone.y(pastePoint.y + shape.y() - midpoint.y);
-                layer.add(clone);
-                newSelect.push(clone);
-            });
-            tr.setZIndex(layer.children.length - 1);
-            tr.nodes().forEach(element => {
-                element.setDraggable(false);
-            });
-            tr.nodes(newSelect);
-            tr.nodes().forEach(element => {
-                element.setDraggable(true);
-            });
-            copiedShapes = newSelect;
-            var midpoint = { x: 10, y: 10 };
-            copiedShapes.forEach((shape) => {
-                midpoint.x += shape.x();
-                midpoint.y += shape.y();
-            });
-            midpoint.x /= copiedShapes.length;
-            midpoint.y /= copiedShapes.length;
-            pastePoint = midpoint;
-        }
-
-    });
-    window.addEventListener('mousedown', (event) => {
-        const rect = stage.container().getBoundingClientRect();
-        pastePoint = {
-            x: clamp(event.clientX - rect.left, 0, stage.width() / stage.scaleX()),
-            y: clamp(event.clientY - rect.top, 0, stage.height() / stage.scaleY())
-        };
-    });
-    mainContainer.value?.addEventListener('click', (e) => {
-        if (e.target !== mainContainer.value) return;
-        
-        tr.nodes().forEach(element => {
-            element.setDraggable(false);
+    nextTick(()=>{
+        vNodeMap.forEach((node,key) => {
+            canvasMap.set(key, node.component?.exposed as InstanceType<typeof Canvas>);
         });
-        closeSidebar();
-        tr.nodes([]);
-        tr.resizeEnabled(true);
+        currentCanvas = canvasMap.get("front")!;
+        currentCanvas.selectThisCanvas();
+        fitStageIntoParentContainer();
+        
+        window.addEventListener('resize', fitStageIntoParentContainer);
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'Delete') {
+                deleteSelected();
+            } else if ((event.key === 'c' || event.key === 'C') && event.ctrlKey) {
+                var copyResult = currentCanvas?.copy();
+                if (!copyResult) return;
+                copiedShapes = copyResult.copiedShapes;
+                pastePoint = copyResult.pastePoint;
+            } else if ((event.key === 'v' || event.key === 'V') && event.ctrlKey) {
+                var pasteResult = currentCanvas?.paste(copiedShapes,pastePoint);
+                if (!pasteResult) return;
+                copiedShapes = pasteResult.copiedShapes;
+                pastePoint = pasteResult.pastePoint;
+            }
+        });
+        mainContainer.value?.addEventListener('click', (e) => {
+            if (e.target !== mainContainer.value) return;
+            currentCanvas?.deselect();
+        })
     })
 });
 </script>
@@ -703,11 +405,6 @@ onMounted(() => {
     .main-container {
         height: calc(100vh - 56px);
     }
-}
-
-.canvas-container {
-    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
-    margin-bottom: 70px;
 }
 
 footer {
