@@ -58,7 +58,7 @@ import NavigationBar from '@/components/NavigationBar.vue';
 import { API_BASE_URL, CardType } from '@/scripts/Constants';
 import { clamp } from '@/scripts/Utils';
 import axios from 'axios';
-import { ref, onMounted, type Ref } from 'vue';
+import { ref, onMounted, type Ref, computed } from 'vue';
 import { useRoute } from 'vue-router';
 
 const route = useRoute()
@@ -111,6 +111,17 @@ onMounted(async () => {
     });
 });
 
+const leftPosition = computed(() => {
+    const baseLeft = (cardType.value === CardType.Openable) ? 
+        containerWidth.value * 0.6 : containerWidth.value * 0.05;
+    
+    if (cardType.value === CardType.Openable)
+        return window.innerWidth >= 1555 ? `calc(${baseLeft}px + 50vw - 778px)` : `calc(${baseLeft}px)`;
+    else 
+        return window.innerWidth >= 788 ? `calc(${baseLeft}px + 50vw - 389px)` : `calc(${baseLeft}px)`;
+        
+});
+
 function adjustContainerSize() {
     var maxWidth = window.innerWidth * 0.9;
     var maxHeight = window.innerHeight - 120;
@@ -121,10 +132,7 @@ function adjustContainerSize() {
 
     const aspectRatio = 707 / 1000;
 
-    if (maxWidth / maxHeight > aspectRatio) {
-        containerHeight.value = maxHeight;
-        containerWidth.value = maxHeight * aspectRatio;
-    } else {
+    if (maxWidth / maxHeight <= aspectRatio) {
         containerWidth.value = maxWidth;
         containerHeight.value = maxWidth / aspectRatio;
     }
@@ -200,7 +208,6 @@ function imageStyle(image: String) {
     justify-content: center;
     align-items: center;
     perspective: 2000px;
-    margin: 0px auto;
 }
 
 .postcard {
@@ -214,15 +221,9 @@ function imageStyle(image: String) {
 .postcard>div {
     position: absolute;
     top: calc(40vh - v-bind(containerHeight/2 + 'px'));
-    left: calc(v-bind(containerWidth * 0.6 + 'px'));
+    left: v-bind(leftPosition);
     backface-visibility: hidden;
 }
-@media (min-width: 1555px) {
-    .postcard>div {
-        left: calc(v-bind(containerWidth * 0.6 + 'px') + 50vw - 778px);
-    }
-}
-
 footer {
     width: 100%;
     position: absolute;
