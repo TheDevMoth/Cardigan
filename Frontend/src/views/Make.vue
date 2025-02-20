@@ -42,7 +42,7 @@
             @download-p-d-f="downloadPDF"
             ref="done-modal"
         />
-        <!-- <CardModal @card-selected="handleCardTypeSelected" ref="cardModal" /> -->
+        <CardModal @card-selected="handleCardTypeSelected" ref="cardModal" />
         
         <div style="position:relative">
             <main class="main-container" ref="main-container">
@@ -55,11 +55,11 @@
             </SideBar>
         </div>
         <footer>
-            <div class="btn-group" role="group">
+            <div class="btn-group" role="group" ref="footer-buttons">
                 <button @click="switchPage('front')" :class="{ active: currentPage === 'front' }">
                     <div style="transform: scale(1.5, 2.5)"><i class="bi bi-wallet2 px-2 my-0" /></div>
                 </button>
-                <button @click="switchPage('inside')" :class="{ active: currentPage === 'inside' }">
+                <button @click="switchPage('inside')" :class="{ active: currentPage === 'inside' }" ref="inside-button">
                     <div style="transform: scale(2.5, 3)"><i class="bi bi-postcard px-2 my-0" /></div>
                 </button>
                 <button @click="switchPage('back')" :class="{ active: currentPage === 'back' }">
@@ -83,7 +83,8 @@ import Konva from 'konva';
 import type { Vector2d } from 'konva/lib/types';
 import jsPDF from 'jspdf';
 import axios from 'axios';
-import { API_BASE_URL } from '@/scripts/Constants';
+import { API_BASE_URL, CardType } from '@/scripts/Constants';
+import CardModal from '@/components/CardModal.vue';
 
 function openOptionsSidebar(selectedItem: any) {
     if (sidebarSlot.value && sidebarSlot.value.hasChildNodes()) {
@@ -216,10 +217,14 @@ async function shareCard() {
     waitingForResult = true;
     
     const formData = new FormData();
-    for (const page in canvasMap.keys()) {
-        const blob = await canvasMap.get(page)!.toBlob().then(blob => blob as Blob);
+    const blobPromises = Array.from(canvasMap.entries()).map(async ([page, canvas]) => {
+        const blob = await canvas.toBlob() as Blob;
+        return { page, blob }; 
+    });
+    const blobs = await Promise.all(blobPromises); 
+    blobs.forEach(({ page, blob }) => { 
         if (blob) formData.append(page, blob, `${page}.png`);
-    }
+    });
 
     try {
         const result = await axios.post(`${API_BASE_URL}/card/`, formData, {
@@ -227,9 +232,14 @@ async function shareCard() {
                 'Content-Type': 'multipart/form-data'
             }
         });
+        console.log("response");
+        console.log(result);
         
         if (!waitingForResult) return;
-        doneModal.value?.updateResults(`${window.location.origin}/card/${result.data.id}`);
+        if (result.data.error != undefined)
+            doneModal.value?.updateResults(`Error: ${result.data.error}`);
+        else
+            doneModal.value?.updateResults(`${window.location.origin}/card/${result.data.id}`);
     } catch (error: any) {
         if (!waitingForResult) return;
         doneModal.value?.updateResults(`Error: ${error.message}`);
@@ -253,58 +263,61 @@ function downloadImages() {
 }
 function downloadPDF() {
     const pdf = new jsPDF({
-        orientation: 'landscape',
+        orientation: 'portrait',
         unit: 'pt',
-        format: [1000, 1414]
+        format: [1414, 2000]
     });
 
-    const frontImg = canvasMap.get('front')?.toImage();
-    const backImg = canvasMap.get('back')?.toImage();
-    if (frontImg && backImg) {
-        const frontCanvas = canvasMap.get('front')!;
-        frontCanvas!.stage().find('Text').forEach((text) => {
-            var kText = text as Konva.Text;
-            const size = kText.fontSize() * kText.scaleX();
-            pdf.setFontSize(size);
-            pdf.text(kText.text(), kText.x(), kText.y(), {
-                baseline: 'top',
-                angle: -kText.getAbsoluteRotation(),
-            });
+    const frontImg = canvasMap.get('front')!.toImage();
+    const frontCanvas = canvasMap.get('front')!;
+    frontCanvas!.stage().find('Text').forEach((text) => {
+        var kText = text as Konva.Text;
+        const size = kText.fontSize() * kText.scaleX() * 0.9;
+        pdf.setFontSize(size);
+        pdf.text(kText.text(), kText.x(), kText.y(), {
+            baseline: 'top',
+            angle: -kText.getAbsoluteRotation(),
         });
-
-        pdf.addImage(frontImg, 'PNG', 0, 0, 707, 1000);
-
-        const backCanvas = canvasMap.get('back')!;
-        backCanvas.stage().find('Text').forEach((text) => {
-            var kText = text as Konva.Text;
-            const size = kText.fontSize() / 0.75;
-            pdf.setFontSize(size);
-            pdf.text(kText.text(), kText.x() * kText.scaleX() + 707, kText.y() * kText.scaleY(), {
-                baseline: 'top',
-                angle: -kText.getAbsoluteRotation(),
-            });
+    });
+    pdf.addImage(frontImg, 'PNG', 0, 0, 707, 1000);
+    
+    if (cardType == CardType.OneSided){ 
+        pdf.save('greeting_card.pdf');
+        return;
+    }
+    
+    const backImg = canvasMap.get('back')!.toImage();
+    const backCanvas = canvasMap.get('back')!;
+    backCanvas.stage().find('Text').forEach((text) => {
+        var kText = text as Konva.Text;
+        const size = kText.fontSize() * kText.scaleX() * 0.9;
+        pdf.setFontSize(size);
+        pdf.text(kText.text(), kText.x() + 707, kText.y(), {
+            baseline: 'top',
+            angle: -kText.getAbsoluteRotation(),
         });
+    });
+    pdf.addImage(backImg, 'PNG', 707, 0, 707, 1000);
 
-        pdf.addImage(backImg, 'PNG', 707, 0, 707, 1000);
+    if (cardType == CardType.TwoSided){ 
+        pdf.save('greeting_card.pdf');
+        return;
     }
 
     // Second page: Inside
-    pdf.addPage([1000, 1414]);
-    const insideImg = canvasMap.get('inside')?.toImage();
-    if (insideImg) {
-        const insideCanvas = canvasMap.get('inside')!;
-        insideCanvas.stage().find('Text').forEach((text) => {
-            var kText = text as Konva.Text;
-            const size = kText.fontSize() / 0.75;
-            pdf.setFontSize(size);
-            pdf.text(kText.text(), kText.x() * kText.scaleX(), kText.y() * kText.scaleY(), {
-                baseline: 'top',
-                angle: -kText.getAbsoluteRotation(),
-            });
+    const insideImg = canvasMap.get('inside')!.toImage();
+    const insideCanvas = canvasMap.get('inside')!;
+    insideCanvas.stage().find('Text').forEach((text) => {
+        var kText = text as Konva.Text;
+        const size = kText.fontSize() * kText.scaleX() * 0.9;
+        pdf.setFontSize(size);
+        pdf.text(kText.text(), kText.x(), kText.y()+1000, {
+            baseline: 'top',
+            angle: -kText.getAbsoluteRotation(),
         });
+    });
 
-        pdf.addImage(insideImg, 'PNG', 0, 0, 1414, 1000);
-    }
+    pdf.addImage(insideImg, 'PNG', 0, 1000, 1414, 1000);
 
     pdf.save('greeting_card.pdf');
 }
@@ -314,45 +327,30 @@ function updatePastePoint(x: number, y: number){
 function closeShareModal() {
     waitingForResult = false;
 }
-function handleCardTypeSelected() {
+function handleCardTypeSelected(type: CardType) {
+    cardType = type;
+    // Decide which footer buttons to show
+    if (cardType == CardType.OneSided){
+        footerButtonGroup.value!.style.display = "none";
+    } else if (cardType == CardType.TwoSided){
+        footerInsideButton.value!.style.display = "none";
+    }
 
-}
-
-const pageSizes: { [key: string]: { width: number; height: number } } = {
-    "front": { width: 1414 / 2, height: 1000 },
-    "inside": { width: 1414, height: 1000 },
-    "back": { width: 1414 / 2, height: 1000 },
-}
-
-const currentPage = ref("front");
-var currentCanvas: InstanceType<typeof Canvas> | null = null;
-const canvasMap = new Map<string, InstanceType<typeof Canvas>>();
-const vNodeMap = new Map<string, VNode>()
-const fileInput = useTemplateRef("fileInput");
-const sidebar = useTemplateRef("sidebar");
-const sidebarSlot = useTemplateRef("sidebarSlot");
-const mainContainer = useTemplateRef("main-container");
-const doneModal = useTemplateRef("done-modal");
-var copiedShapes: Konva.Node[] = [];
-var pastePoint: Vector2d;
-
-const frontCanvasContainer = useTemplateRef("frontCanvasContainer");
-const insideCanvasContainer = useTemplateRef("insideCanvasContainer");
-const backCanvasContainer = useTemplateRef("backCanvasContainer");
-
-var waitingForResult = false;
-
-
-onMounted(() => {
+    // init the necessary cards
     var frontCanvas = h(Canvas, {page: "front", onOpenOptions: openOptionsSidebar, onCloseOptions: closeSidebar, onUpdatePastePoint: updatePastePoint});
     if (frontCanvasContainer.value) render(frontCanvas, frontCanvasContainer.value);
     vNodeMap.set("front", frontCanvas);
-    var insideCanvas = h(Canvas, {page: "inside", onOpenOptions: openOptionsSidebar, onCloseOptions: closeSidebar, onUpdatePastePoint: updatePastePoint});
-    if (insideCanvasContainer.value) render(insideCanvas, insideCanvasContainer.value);
-    vNodeMap.set("inside", insideCanvas);
-    var backCanvas = h(Canvas, {page: "back", onOpenOptions: openOptionsSidebar, onCloseOptions: closeSidebar, onUpdatePastePoint: updatePastePoint});
-    if (backCanvasContainer.value) render(backCanvas, backCanvasContainer.value);
-    vNodeMap.set("back", backCanvas);
+    
+    if (cardType == CardType.Openable){
+        var insideCanvas = h(Canvas, {page: "inside", onOpenOptions: openOptionsSidebar, onCloseOptions: closeSidebar, onUpdatePastePoint: updatePastePoint});
+        if (insideCanvasContainer.value) render(insideCanvas, insideCanvasContainer.value);
+        vNodeMap.set("inside", insideCanvas);
+    }
+    if (cardType == CardType.Openable || cardType == CardType.TwoSided){
+        var backCanvas = h(Canvas, {page: "back", onOpenOptions: openOptionsSidebar, onCloseOptions: closeSidebar, onUpdatePastePoint: updatePastePoint});
+        if (backCanvasContainer.value) render(backCanvas, backCanvasContainer.value);
+        vNodeMap.set("back", backCanvas);
+    }
 
     nextTick(()=>{
         vNodeMap.forEach((node,key) => {
@@ -383,6 +381,37 @@ onMounted(() => {
             currentCanvas?.deselect();
         })
     })
+}
+
+const pageSizes: { [key: string]: { width: number; height: number } } = {
+    "front": { width: 1414 / 2, height: 1000 },
+    "inside": { width: 1414, height: 1000 },
+    "back": { width: 1414 / 2, height: 1000 },
+}
+
+const currentPage = ref("front");
+var currentCanvas: InstanceType<typeof Canvas> | null = null;
+const canvasMap = new Map<string, InstanceType<typeof Canvas>>();
+const vNodeMap = new Map<string, VNode>()
+const fileInput = useTemplateRef("fileInput");
+const sidebar = useTemplateRef("sidebar");
+const sidebarSlot = useTemplateRef("sidebarSlot");
+const mainContainer = useTemplateRef("main-container");
+const doneModal = useTemplateRef("done-modal");
+var copiedShapes: Konva.Node[] = [];
+var pastePoint: Vector2d;
+
+const frontCanvasContainer = useTemplateRef("frontCanvasContainer");
+const insideCanvasContainer = useTemplateRef("insideCanvasContainer");
+const backCanvasContainer = useTemplateRef("backCanvasContainer");
+const footerInsideButton = useTemplateRef("inside-button");
+const footerButtonGroup = useTemplateRef("footer-buttons")
+
+var waitingForResult = false;
+var cardType: CardType;
+
+onMounted(() => {
+    
 });
 </script>
 

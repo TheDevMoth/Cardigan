@@ -166,6 +166,7 @@ function createStage(page: string): Konva.Stage {
         layer.find('.guid-line').forEach((l) => l.destroy());
 
         var itemBounds = Guides.getObjectSnappingEdges(tr.nodes() as Konva.Shape[], e.target);
+        if (lineGuideStops == undefined) lineGuideStops = Guides.getLineGuideStops(tr.nodes() as Konva.Shape[], stage, layer, page == "inside");
         var guides = Guides.getGuides(lineGuideStops, itemBounds);
 
         if (!guides.length) return;

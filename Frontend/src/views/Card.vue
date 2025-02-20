@@ -4,7 +4,7 @@
     </header>
     <div class="background">
         <div class="postcard-container" :style="{ width: containerWidth + 'px', height: containerHeight + 'px' }">
-            <div v-if="imagesRetrieved" class="postcard" :class="{ 'on-back': onBack, 'on-inside': onInside, 'on-front': onFront }">
+            <div v-if="imagesRetrieved && cardType==CardType.Openable" class="postcard" :class="{ 'on-back': onBack, 'on-inside': onInside, 'on-front': onFront }">
                 <div class="front" :style="imageStyle(frontImage)" @click="right()"
                     :class="{ 'on-back': onBack, 'on-inside': onInside, 'on-front': onFront }"></div>
                 <div class="inside-right" :style="imageStyle(backInsideImage)" @click="right()"
@@ -13,6 +13,16 @@
                     :class="{ 'on-back': onBack, 'on-inside': onInside, 'on-front': onFront }"></div>
                 <div class="back" :style="imageStyle(backImage)" @click="left()"
                     :class="{ 'on-back': onBack, 'on-inside': onInside, 'on-front': onFront }"></div>
+            </div>
+            <div v-else-if="imagesRetrieved && cardType==CardType.TwoSided" class="postcard">
+                <div class="front" :style="imageStyle(frontImage)" @click="flip()"
+                    :class="{ 'on-back-2': onBack, 'on-front-2': onFront }"></div>
+                <div class="back" :style="imageStyle(backImage)" @click="flip()"
+                    :class="{ 'on-back-2': onBack, 'on-front-2': onFront }"></div>
+            </div>
+            <div v-else-if="imagesRetrieved && cardType==CardType.OneSided" class="postcard">
+                <div class="front" :style="imageStyle(frontImage)"
+                    :class="{'on-front-1': onFront }"></div>
             </div>
             <div v-else >
                 <div v-if="couldNotRetrieve">
@@ -24,27 +34,35 @@
             </div>
         </div>
         <footer>
-            <div class="btn-group" role="group">
-                <button @click="left()" class="btn btn-danger">
-                    <i class="bi bi-arrow-left px-2 my-0" style="font-size: 2rem;"/>
-                </button>
-                <button @click="right()" class="btn btn-danger">
-                    <i class="bi bi-arrow-right px-2 my-0" style="font-size: 2rem;"/>
+            <div v-if="imagesRetrieved && cardType==CardType.Openable">
+                <div class="btn-group" role="group">
+                    <button @click="left()" class="btn btn-danger">
+                        <i class="bi bi-arrow-left px-2 my-0" style="font-size: 2rem;"/>
+                    </button>
+                    <button @click="right()" class="btn btn-danger">
+                        <i class="bi bi-arrow-right px-2 my-0" style="font-size: 2rem;"/>
+                    </button>
+                </div>
+            </div>
+            <div v-if="imagesRetrieved && cardType==CardType.TwoSided">
+                <button @click="flip()" class="btn btn-danger footer-btn">
+                    <i class="bi bi-phone-flip px-2 my-0" style="font-size: 2rem;"/>
                 </button>
             </div>
         </footer>
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import NavigationBar from '@/components/NavigationBar.vue';
-import { API_BASE_URL } from '@/scripts/Constants';
+import { API_BASE_URL, CardType } from '@/scripts/Constants';
 import axios from 'axios';
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, type Ref } from 'vue';
 import { useRoute } from 'vue-router';
 
 const route = useRoute()
 const cardId = route.params.id
+const cardType: Ref<CardType | null> = ref(null);
 
 const frontImage = ref("");
 const backInsideImage = ref("");
@@ -70,13 +88,22 @@ onMounted(async () => {
     window.addEventListener('resize', adjustContainerSize);
     
     await axios.get(`${API_BASE_URL}/card/${cardId}`).then((result) => {
+        
         frontImage.value = result.data["front"];
-        frontInsideImage.value = result.data["front_inside"];
-        backInsideImage.value = result.data["back_inside"];
-        backImage.value = result.data["back"];
+
+        if (result.data["front_inside"] != null) {
+            frontInsideImage.value = result.data["front_inside"];
+            backInsideImage.value = result.data["back_inside"];
+            backImage.value = result.data["back"];
+            cardType.value = CardType.Openable;
+        } else if (result.data["back"] != null){
+            backImage.value = result.data["back"];
+            cardType.value = CardType.TwoSided;
+        } else {
+            cardType.value = CardType.OneSided;
+        }
         imagesRetrieved.value = true;
         
-        console.log("thend");
     }).catch((reason) => {
         couldNotRetrieve.value = true;
         error.value = reason;
@@ -101,9 +128,8 @@ const adjustContainerSize = () => {
 function left() {
     const currentTime = Date.now();
     if (currentTime - lastActionTime.value < COOLDOWN_DURATION) return;
-    
     lastActionTime.value = currentTime;
-    
+
     if (onFront.value) return;
     else if (onInside.value) {
         onFront.value = true;
@@ -117,7 +143,6 @@ function left() {
 function right() {
     const currentTime = Date.now();
     if (currentTime - lastActionTime.value < COOLDOWN_DURATION) return;
-    
     lastActionTime.value = currentTime;
     
     if (onBack.value) return;
@@ -130,12 +155,33 @@ function right() {
     }
 }
 
-const imageStyle = (image) => {
-    return {
+function flip() {
+    const currentTime = Date.now();
+    if (currentTime - lastActionTime.value < COOLDOWN_DURATION) return;
+    lastActionTime.value = currentTime;
+
+    if (onFront.value) {
+        onBack.value = true;
+        onFront.value = false;
+    } else {
+        onBack.value = false;
+        onFront.value = true;
+    }
+}
+
+function imageStyle(image: String) {
+    var styles = {
         backgroundImage: `url(${image})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
+        display: 'block'
     };
+    if (cardType.value != CardType.Openable && (image == "backInsideImage" || image == "frontInsideImage")){
+        styles.display = "none";
+    } else if (cardType.value == CardType.OneSided && image == "backImage"){
+        styles.display = "none"
+    }
+    return styles;
 };
 
 </script>
@@ -178,6 +224,13 @@ footer {
     justify-content: center;
 }
 
+.footer-btn {
+    padding: 16px 16px;
+    border: 1px solid;
+    cursor: pointer;
+    border-radius: 20px 20px 0 0;
+}
+
 footer .btn-group button {
     padding: 16px 16px;
     border: 1px solid;
@@ -207,6 +260,7 @@ footer .btn-group button:last-child {
     transform: translateZ(1px);
 }
 
+/* openable cards */
 .front.on-front {
     transform: rotateY(0deg) translateX(50%) translateZ(0px);
 }
@@ -254,4 +308,26 @@ footer .btn-group button:last-child {
 .back.on-back {
     transform: rotateY(0deg) translateX(-50%) translateZ(0px);
 }
+
+/* two sided cards */
+
+.front.on-front-2 {
+    transform: rotateY(0deg) translateZ(1px);
+}
+.front.on-back-2 {
+    transform: rotateY(-180deg) translateZ(0px);
+}
+.back.on-front-2 {
+    transform: rotateY(180deg) translateZ(0px);
+}
+.back.on-back-2 {
+    transform: rotateY(0deg) translateZ(1px);
+}
+
+/* one sided cards */
+.front.on-front-1 {
+    transform: rotateY(0deg) translateZ(1px);
+}
+
+
 </style>
