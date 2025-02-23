@@ -56,13 +56,12 @@ shuffleArray(words);
                     </span>
 
                 </h1>
-                <span class="banner-subtitle"> Send them an electronic gift card! </span>
+                <span class="banner-subtitle"> Send them a greeting card! </span>
             </div>
             <img src="/cards.png" alt="cards" class="banner-image">
         </div>
 
-        <button type="button" class="btn btn-danger" @click="() => $router.push('/make')">Make your next gift
-            card</button>
+        <button type="button" class="btn btn-danger" @click="() => $router.push('/make')">Make a card today</button>
 
         <div class="card">
             <div class="card-body">
