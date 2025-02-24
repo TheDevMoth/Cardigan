@@ -132,7 +132,7 @@ function openEmojiSidebar() {
         render(emojiCreateVNode, sidebarSlot.value);
     } else console.error("sidebar slot is not there");
     
-    sidebar.value?.forceExpandSidebar()
+    sidebar.value?.forceExpandSidebar();
 }
 
 function closeSidebar() {

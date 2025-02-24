@@ -1,43 +1,35 @@
 <template>
     <div class="container d-flex flex-column">
         <div class="search-container mb-3">
-            <input 
-                type="text" 
-                v-model="searchQuery" 
-                class="form-control" 
-                placeholder="Search emojis..."
-            />
+            <input type="text" v-model="searchQuery" class="form-control" placeholder="Search emojis..." />
             <div class="category-filters mt-2 d-flex flex-wrap">
-                <button 
-                    v-for="category in categories" 
-                    :key="category"
-                    @click="selectCategory(category)"
-                    :class="{ active: selectedCategory === category }"
-                    class="btn btn-sm me-2 mb-2"
-                >
+                <button v-for="category in categories" :key="category" @click="selectCategory(category)"
+                    :class="{ active: selectedCategory === category }" class="btn btn-sm me-2 mb-2">
                     {{ formatCategoryName(category) }}
                 </button>
             </div>
         </div>
 
+        <div v-if="showAlert" class="alert alert-warning alert-dismissible fade show sticky-alert" role="alert">
+            Some emojis may not be visible if your device doesn't support them.
+            <button type="button" class="btn-close" @click="dismissAlert" aria-label="Close"></button>
+        </div>
 
         <div class="emoji-container">
             <div class="emoji-grid">
-                <button
-                    v-for="(emoji, index) in filteredEmojis"
-                    :key="emoji.code + index"
-                    @click="selectEmoji(emoji)"
-                    class="emoji-button"
-                >
+                <button v-for="(emoji, index) in filteredEmojis" :key="emoji.code + index" @click="selectEmoji(emoji)"
+                    class="emoji-button">
                     <span class="emoji-char">{{ getEmojiChar(emoji.code) }}</span>
                 </button>
             </div>
         </div>
+
+
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import Konva from 'konva';
 import emojiData from '@/assets/emojis.json';
 
@@ -48,7 +40,7 @@ type Emoji = {
 }
 
 function formatCategoryName(category: string): string {
-    return category === 'all' ? 'All' 
+    return category === 'all' ? 'All'
         : category.split('_')
             .map(word => word.charAt(0).toUpperCase() + word.slice(1))
             .join(' ');
@@ -65,7 +57,7 @@ function selectCategory(category: string) {
     selectedCategory.value = category;
 };
 
-function selectEmoji(emoji:Emoji) {
+function selectEmoji(emoji: Emoji) {
     const emojiBox = new Konva.Text({
         text: getEmojiChar(emoji.code),
         fontSize: 50,
@@ -73,7 +65,7 @@ function selectEmoji(emoji:Emoji) {
         name: "Emoji"
     });
     emojiBox.className = "Emoji";
-    
+
     emit('emoji-selected', emojiBox);
 };
 
@@ -84,7 +76,7 @@ const categories = computed(() => ['all', ...Object.keys(emojiData)]);
 const filteredEmojis = computed(() => {
     return emojis.value.filter(emoji => {
         const matchesSearch = emoji.name.toLowerCase().includes(searchQuery.value.toLowerCase());
-        const matchesCategory = selectedCategory.value === 'all' || 
+        const matchesCategory = selectedCategory.value === 'all' ||
             emoji.category === selectedCategory.value;
         return matchesSearch && matchesCategory;
     });
@@ -101,9 +93,16 @@ onMounted(() => {
             category
         }));
         flattenedEmojis.push(...emojisWithCategory);
-    }, []);    
+    }, []);
     emojis.value = flattenedEmojis;
 });
+
+const showAlert = ref(localStorage.getItem('emojiAlertDismissed') !== 'true');
+
+function dismissAlert() {
+    showAlert.value = false;
+    localStorage.setItem('emojiAlertDismissed', 'true');
+}
 
 </script>
 
@@ -149,7 +148,7 @@ onMounted(() => {
 
 .container {
     height: 100%;
-    max-height: calc(100vh - 96px); 
+    max-height: calc(100vh - 96px);
 }
 
 @media (min-width: 996px) {
@@ -157,6 +156,7 @@ onMounted(() => {
         height: calc(100vh - 56px);
     }
 }
+
 .emoji-container {
     flex: 1;
     overflow-y: auto;
@@ -183,6 +183,14 @@ onMounted(() => {
 .emoji-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
-    gap: 8px;
+    gap:8px;
+}
+
+.sticky-alert {
+    position: absolute;
+    bottom: 0px; 
+    z-index: 1;
+    margin-bottom: 10px;
+    width: 355px;
 }
 </style>
