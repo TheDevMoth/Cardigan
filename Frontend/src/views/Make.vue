@@ -27,8 +27,7 @@
                     </div>
                 </template>
                 <template #end>
-                    <button type="button" class="btn btn-danger ps-3 rounded-4" data-bs-toggle="modal"
-                        data-bs-target="#doneModal">
+                    <button type="button" class="btn btn-danger ps-3 rounded-4" data-bs-toggle="modal" data-bs-target="#doneModal" @click="() => hasUnsavedChanges = false">
                         Done!
                         <i class="bi bi-chevron-right"></i>
                     </button>
@@ -126,21 +125,21 @@ function openEmojiSidebar() {
     const emojiCreateVNode = createVNode(EmojiCreate);
 
     emojiCreateVNode.props = {
-        onEmojiSelected: currentCanvas!.addNode
+        onEmojiSelected: (node: Konva.Shape) => currentCanvas!.addNode(node, false)
     };
 
     if (sidebarSlot.value) {
         render(emojiCreateVNode, sidebarSlot.value);
     } else console.error("sidebar slot is not there");
-
+    
     sidebar.value?.forceExpandSidebar()
 }
 
 function closeSidebar() {
-    sidebar.value?.retractSidebar();
     if (sidebarSlot.value) {
         render(null, sidebarSlot.value);
     }
+    sidebar.value?.retractSidebar();
 }
 
 function deleteSelected() {
@@ -167,19 +166,19 @@ function handleFileUpload(event: Event) {
     if (input.files && input.files[0]) {
         const file = input.files[0];
         const reader = new FileReader();
-        reader.onload = function (e) {
+        reader.onload = (e) => {
             const img = new Image();
-            img.onload = function () {
+            img.onload = () => {
                 addImage(img);
                 if (input) input.value = '';
             };
-            img.onerror = function () {
+            img.onerror = () => {
                 console.error('Error loading image');
                 if (input) input.value = '';
             };
             img.src = e.target?.result as string;
         };
-        reader.onerror = function () {
+        reader.onerror = () => {
             console.error('Error reading file');
             if (input) input.value = '';
         };
@@ -337,17 +336,17 @@ function handleCardTypeSelected(type: CardType) {
     }
 
     // init the necessary cards
-    var frontCanvas = h(Canvas, {page: "front", onOpenOptions: openOptionsSidebar, onCloseOptions: closeSidebar, onUpdatePastePoint: updatePastePoint});
+    var frontCanvas = h(Canvas, {page: "front", onOpenOptions: openOptionsSidebar, onCloseOptions: closeSidebar, onUpdatePastePoint: updatePastePoint, onChangesHappened: () => hasUnsavedChanges = true});
     if (frontCanvasContainer.value) render(frontCanvas, frontCanvasContainer.value);
     vNodeMap.set("front", frontCanvas);
     
     if (cardType == CardType.Openable){
-        var insideCanvas = h(Canvas, {page: "inside", onOpenOptions: openOptionsSidebar, onCloseOptions: closeSidebar, onUpdatePastePoint: updatePastePoint});
+        var insideCanvas = h(Canvas, {page: "inside", onOpenOptions: openOptionsSidebar, onCloseOptions: closeSidebar, onUpdatePastePoint: updatePastePoint, onChangesHappened: () => hasUnsavedChanges = true});
         if (insideCanvasContainer.value) render(insideCanvas, insideCanvasContainer.value);
         vNodeMap.set("inside", insideCanvas);
     }
     if (cardType == CardType.Openable || cardType == CardType.TwoSided){
-        var backCanvas = h(Canvas, {page: "back", onOpenOptions: openOptionsSidebar, onCloseOptions: closeSidebar, onUpdatePastePoint: updatePastePoint});
+        var backCanvas = h(Canvas, {page: "back", onOpenOptions: openOptionsSidebar, onCloseOptions: closeSidebar, onUpdatePastePoint: updatePastePoint, onChangesHappened: () => hasUnsavedChanges = true});
         if (backCanvasContainer.value) render(backCanvas, backCanvasContainer.value);
         vNodeMap.set("back", backCanvas);
     }
@@ -411,9 +410,16 @@ const footerButtonGroup = useTemplateRef("footer-buttons")
 
 var waitingForResult = false;
 var cardType: CardType;
+var hasUnsavedChanges = false;
 
 onMounted(() => {
-    
+    window.addEventListener('beforeunload', function (e) {
+    if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+    }
+    });
 });
 </script>
 

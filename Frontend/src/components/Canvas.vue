@@ -22,6 +22,7 @@ const emit = defineEmits<{
     openOptions: [node: Konva.Shape],
     closeOptions: [],
     updatePastePoint: [x: number, y: number],
+    changesHappened: [],
 }>();
 defineExpose({
     deleteSelected, 
@@ -54,7 +55,7 @@ function deleteSelected() {
     tr.nodes([]);
     layer.batchDraw();
 }
-function addNode(node: Konva.Shape) {
+function addNode(node: Konva.Shape, selectNewNode=true) {
     
     // position the node at the middle
     node.x(stage.width() / stage.scaleX() / 2);
@@ -72,11 +73,14 @@ function addNode(node: Konva.Shape) {
     });
 
     layer.add(node);
-    emit("openOptions", node);
-    select([node]);
     tr.setZIndex(layer.children.length - 1);
+    if (selectNewNode){
+        select([node]);
+        emit("openOptions", node);
 
-    lineGuideStops = Guides.getLineGuideStops([node], stage, layer, props.page == "inside");
+        lineGuideStops = Guides.getLineGuideStops([node], stage, layer, props.page == "inside");
+    }
+    emit("changesHappened");
 }
 
 function createStage(page: string): Konva.Stage {
