@@ -70,5 +70,7 @@ function close(){
 </script>
 
 <style scoped>
-    
+.modal-body {
+    text-wrap: wrap;
+}
 </style>

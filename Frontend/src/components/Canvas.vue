@@ -206,6 +206,7 @@ function select(nodes: Konva.Shape[]){
     if (nodes.length == 1) emit("openOptions", nodes[0]);
 }
 function deselect(){
+    emit('closeOptions');
     select([]);
 }
 function selectThisCanvas(){
@@ -265,7 +266,7 @@ function paste(copiedShapes: Konva.Node[], pastePoint: {x:number,y:number}){
     }
 }
 function toImage() {
-
+    deselect();
     const ogWidth = stage.width();
     const ogHeight = stage.height();
     const ogScale = stage.scale();

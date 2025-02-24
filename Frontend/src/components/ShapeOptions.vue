@@ -108,21 +108,21 @@ const properties: Record<string, string[]> = {
 
 const hasProperty = (prop: string) => properties[shapeType.value]?.includes(prop);
 
-const fill = ref(props.shape.fill() || '#000000');
-const stroke = ref(props.shape.stroke() || '#000000');
-const strokeWidth = ref(props.shape.strokeWidth() || 1);
-const opacity = ref(props.shape.opacity() || 1);
-const text = ref((props.shape as Konva.Text).text?.() || '');
+const fill = ref(props.shape.fill());
+const stroke = ref(props.shape.stroke());
+const strokeWidth = ref(props.shape.strokeWidth());
+const opacity = ref(props.shape.opacity());
+const text = ref((props.shape as Konva.Text).text?.() ?? '');
 // const fontSize = ref((props.shape as Konva.Text).fontSize?.() || 16);
-const fontFamily = ref((props.shape as Konva.Text).fontFamily?.() || 'Arial');
+const fontFamily = ref((props.shape as Konva.Text).fontFamily?.() ?? 'Arial');
 const align = ref((props.shape as Konva.Text).align?.() || 'left');
-const numPoints = ref((props.shape as Konva.Star).numPoints?.() || 5);
-const innerRadius = ref((props.shape as Konva.Star).innerRadius?.() || 10);
-const outerRadius = ref((props.shape as Konva.Star).outerRadius?.() || 20);
+const numPoints = ref((props.shape as Konva.Star).numPoints?.() ?? 5);
+const innerRadius = ref(props.shape.getAttr("innerRadius") ?? (props.shape.className == "Star" ? 10 : 35));
+const outerRadius = ref((props.shape as Konva.Star).outerRadius?.() ?? 20);
 const zIndex = ref(props.shape.getZIndex());
 const fillEnabled = ref(props.shape.fillEnabled?.() || true);
-const bottomSharpness = ref((props.shape as any).bottomSharpness?.() || 50);
-const sides = ref((props.shape as Konva.RegularPolygon).sides?.() || 6);
+const bottomSharpness = ref(props.shape.getAttr("bottomSharpness") ?? 50);
+const sides = ref((props.shape as Konva.RegularPolygon).sides?.() ?? 6);
 
 const updateShape = () => {
     if (!props.shape) return;
@@ -133,6 +133,7 @@ const updateShape = () => {
     innerRadius.value = clamp(innerRadius.value, 0, 100);
     outerRadius.value = clamp(outerRadius.value, 0, 100);
     strokeWidth.value = clamp(strokeWidth.value, 0, 100);
+    bottomSharpness.value = clamp(bottomSharpness.value, 0, 100);
 
     if (hasProperty('fill')) props.shape.fill(fill.value);
     if (hasProperty('stroke')) props.shape.stroke(stroke.value);
@@ -143,10 +144,10 @@ const updateShape = () => {
     if (hasProperty('fontFamily')) (props.shape as Konva.Text).fontFamily(fontFamily.value);
     if (hasProperty('align')) (props.shape as Konva.Text).align(align.value);
     if (hasProperty('numPoints')) (props.shape as Konva.Star).numPoints(numPoints.value);
-    if (hasProperty('innerRadius')) (props.shape as Konva.Star).innerRadius(innerRadius.value);
+    if (hasProperty('innerRadius')) props.shape.setAttr("innerRadius",innerRadius.value);
     if (hasProperty('outerRadius')) (props.shape as Konva.Star).outerRadius(outerRadius.value);
     if (hasProperty('fillEnabled')) props.shape.fillEnabled(fillEnabled.value);
-    if (hasProperty('bottomSharpness')) (props.shape as any).bottomSharpness(bottomSharpness.value);
+    if (hasProperty('bottomSharpness')) props.shape.setAttr("bottomSharpness", bottomSharpness.value);
     if (hasProperty('sides')) (props.shape as Konva.RegularPolygon).sides(sides.value);
     props.shape.setZIndex(zIndex.value);
     props.shape.getLayer()?.batchDraw();

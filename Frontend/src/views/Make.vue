@@ -362,6 +362,8 @@ function handleCardTypeSelected(type: CardType) {
         
         window.addEventListener('resize', fitStageIntoParentContainer);
         window.addEventListener('keydown', (event) => {
+            const activeElement = document.activeElement;
+            if (activeElement?.tagName === 'TEXTAREA' || activeElement?.tagName === 'INPUT') return;
             if (event.key === 'Delete') {
                 deleteSelected();
             } else if ((event.key === 'c' || event.key === 'C') && event.ctrlKey) {

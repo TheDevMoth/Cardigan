@@ -77,20 +77,6 @@ function selectEmoji(emoji:Emoji) {
     emit('emoji-selected', emojiBox);
 };
 
-// Load and flatten emoji data
-onMounted(() => {
-    const flattenedEmojis: Emoji[] = [];
-    Object.entries(emojiData).forEach(([category, categoryEmojis]) => { // for each category in the file
-        const emojisWithCategory: Emoji[] = (categoryEmojis).map(emoji => ({
-            name: emoji.n[0],
-            code: emoji.u,
-            category
-        }));
-        flattenedEmojis.push(...emojisWithCategory);
-    }, []);    
-    emojis.value = flattenedEmojis;
-});
-
 const searchQuery = ref('');
 const selectedCategory = ref('all');
 const emojis = ref<Emoji[]>([]);
@@ -105,6 +91,19 @@ const filteredEmojis = computed(() => {
 });
 
 const emit = defineEmits<{ "emoji-selected": [shape: Konva.Text] }>();
+// Load and flatten emoji data
+onMounted(() => {
+    const flattenedEmojis: Emoji[] = [];
+    Object.entries(emojiData).forEach(([category, categoryEmojis]) => { // for each category in the file
+        const emojisWithCategory: Emoji[] = (categoryEmojis).map(emoji => ({
+            name: emoji.n[0],
+            code: emoji.u,
+            category
+        }));
+        flattenedEmojis.push(...emojisWithCategory);
+    }, []);    
+    emojis.value = flattenedEmojis;
+});
 
 </script>
 
@@ -115,6 +114,7 @@ const emit = defineEmits<{ "emoji-selected": [shape: Konva.Text] }>();
     background-color: white;
     z-index: 1;
     padding: 10px 0;
+    width: 355px;
 }
 
 .category-filters .btn {
@@ -163,6 +163,7 @@ const emit = defineEmits<{ "emoji-selected": [shape: Konva.Text] }>();
     padding: 10px;
     scrollbar-width: thin;
     scrollbar-color: #E5383B #f0f0f0;
+    width: 355px;
 }
 
 .emoji-container::-webkit-scrollbar {
