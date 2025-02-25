@@ -1,7 +1,7 @@
 <template>
     <nav class="navbar navbar-bg">
-        <div class="container-fluid d-flex flex-md-row" ref="mainline">
-            <div class="d-flex">
+        <div class="container-fluid nav-container" ref="container">
+            <div class="d-flex nav-start" ref="navStart">
                 <img class="logo" src="/cardigan.png" alt="logo">
                 <router-link to="/" class="navbar-brand on-navbar">Cardigan</router-link>
                 <div class="vr" :class="{ 'hidden-nav': isExtraSmallAndEndFilled }"></div>
@@ -16,53 +16,54 @@
                     </li>
                 </ul>
             </div>
-            <div class="d-flex pe-lg-3" ref="middle">
+            <div class="nav-middle" ref="middle">
                 <slot name="middle"></slot>
             </div>
-            <div class="d-flex" ref="end">
+            <div class="nav-end" ref="end">
                 <slot name="end"></slot>
             </div>
         </div>
-        <div class="d-flex flex-row w-100 justify-content-center" ref="newline"></div>
     </nav>
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, onMounted, watch, useTemplateRef, computed } from 'vue';
+import { ref, nextTick, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 const route = useRoute();
-const breakpoint = ref(window.innerWidth > 992);
-const newline = useTemplateRef("newline");
-const middle = useTemplateRef("middle");
-const mainline = useTemplateRef("mainline");
-const end = useTemplateRef("end");
+const end = ref<HTMLElement | null>(null);
+const middle = ref<HTMLElement | null>(null);
+const navStart = ref<HTMLElement | null>(null);
+const container = ref<HTMLElement | null>(null);
 const endSlotFilled = ref(false);
 const isExtraSmallAndEndFilled = ref(false);
 
-function moveMiddle() {
-    if (!(middle.value && newline.value && mainline.value)) return;
-    if (breakpoint.value) {
-        mainline.value.insertBefore(middle.value, end.value);
-    } else {
-        newline.value.appendChild(middle.value);
-    }
-}
+var startWidth = 0;
+var middleWidth = 0;
+var endWidth = 0;
+
+const checkLayout = () => {
+    nextTick(() => {
+        if (!container.value || !navStart.value || !middle.value || !end.value) return;
+        
+        endWidth = end.value!.offsetWidth;
+        const containerWidth = container.value.offsetWidth;
+        const totalContentWidth = startWidth + middleWidth + endWidth + 50;
+        container.value.classList.toggle('stacked-layout', totalContentWidth > containerWidth);
+        
+        const stackedContentWidth = startWidth + endWidth + 30;
+        isExtraSmallAndEndFilled.value = endSlotFilled.value && stackedContentWidth > containerWidth;
+    });
+};
 
 onMounted(() => {
-    nextTick(() => {
-        window.addEventListener('resize', () => {
-            breakpoint.value = window.innerWidth > 992;
-            isExtraSmallAndEndFilled.value = window.innerWidth <= 550 && endSlotFilled.value;
-        });
-        isExtraSmallAndEndFilled.value = window.innerWidth <= 550 && endSlotFilled.value;
-        moveMiddle();
-        checkEndSlotFilled();
-    });
-});
-
-watch(breakpoint, (newVal) => {
-    moveMiddle();
+    startWidth = navStart.value!.offsetWidth;
+    middleWidth = middle.value!.offsetWidth;
+    endWidth = end.value!.offsetWidth;
+    
+    checkEndSlotFilled();
+    checkLayout();
+    window.addEventListener('resize', checkLayout);
 });
 
 const checkEndSlotFilled = () => {
@@ -71,7 +72,6 @@ const checkEndSlotFilled = () => {
         endSlotFilled.value = endSlotElement;
     });
 };
-
 
 </script>
 
@@ -111,4 +111,26 @@ const checkEndSlotFilled = () => {
     display: none !important;
 }
 
+.nav-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.nav-container.stacked-layout {
+    justify-content: space-between;
+}
+
+.stacked-layout .nav-middle {
+    order: 4;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-left: 0;
+}
+
+.stacked-layout .nav-start,
+.stacked-layout .nav-end {
+    flex: 0 1 auto;
+}
 </style>

@@ -4,16 +4,16 @@
             <NavigationBar>
                 <template #middle>
                     <div class="btn-group" role="group">
-                        <button type="button" class="btn me-sm-4 me-lg-2 me-xl-4 px-1 align-items-center d-flex py-0" @click="addText">
+                        <button type="button" class="btn me-sm-4 me-md-2 me-xl-4 px-1 align-items-center d-flex py-0" @click="addText">
                             <i class="bi bi-textarea-t px-2 my-0" style="font-size: 1.5rem" />
                             <span>Add Text</span>
                         </button>
-                        <button type="button" class="btn me-sm-4 me-lg-2 me-xl-4 px-1 align-items-center d-flex py-0"
+                        <button type="button" class="btn me-sm-4 me-md-2 me-xl-4 px-1 align-items-center d-flex py-0"
                             @click="openShapesSidebar">
                             <i class="bi bi-plus-square-dotted px-2 my-0" style="font-size: 1.5rem" />
                             <span>Add Shape</span>
                         </button>
-                        <button type="button" class="btn me-sm-4 me-lg-2 me-xl-4 px-1 align-items-center d-flex py-0"
+                        <button type="button" class="btn me-sm-4 me-md-2 me-xl-4 px-1 align-items-center d-flex py-0"
                             @click="openEmojiSidebar">
                             <i class="bi bi-emoji-wink px-2 my-0" style="font-size: 1.5rem" />
                             <span>Add Emoji</span>
@@ -22,11 +22,15 @@
                             <i class="bi bi-image px-2 my-0" style="font-size: 1.5rem" />
                             <span>Add Image</span>
                         </button>
-                        <input type="file" ref="fileInput" @change="handleFileUpload" style="display: none;"
-                            accept="image/*" />
+                        <input type="file" ref="fileInput" @change="handleFileUpload" style="display: none;" accept="image/*" />
                     </div>
                 </template>
                 <template #end>
+                    <button v-if="showUploadAudio" type="button" class="btn btn-other rounded-4 me-3" data-bs-toggle="modal" data-bs-target="#audioModal">
+                        <span v-if="audioUploaded" class="hide-when-small px-1">Change audio</span>
+                        <span v-else class="hide-when-small px-1">Add audio</span>
+                        <i class="bi bi-soundwave"></i>
+                    </button>
                     <button type="button" class="btn btn-danger ps-3 rounded-4" data-bs-toggle="modal" data-bs-target="#doneModal" @click="() => hasUnsavedChanges = false">
                         Done!
                         <i class="bi bi-chevron-right"></i>
@@ -34,6 +38,8 @@
                 </template>
             </NavigationBar>
         </header>
+
+        <AudioModal @file-removed="removeFile" @file-uploaded="addFile"></AudioModal>
 
         <DoneModal @share-card="shareCard" 
             @close-share-modal="closeShareModal" 
@@ -78,12 +84,13 @@ import ShapeCreate from '@/components/ShapeCreate.vue';
 import EmojiCreate from '@/components/EmojiCreate.vue';
 import Canvas from '@/components/Canvas.vue';
 import DoneModal from '@/components/DoneModal.vue';
+import CardModal from '@/components/CardModal.vue';
+import AudioModal from '@/components/AudioModal.vue';
 import Konva from 'konva';
 import type { Vector2d } from 'konva/lib/types';
 import jsPDF from 'jspdf';
 import axios from 'axios';
 import { API_BASE_URL, CardType } from '@/scripts/Constants';
-import CardModal from '@/components/CardModal.vue';
 
 function openOptionsSidebar(selectedItem: any) {
     if (sidebarSlot.value && sidebarSlot.value.hasChildNodes()) {
@@ -224,15 +231,15 @@ async function shareCard() {
     blobs.forEach(({ page, blob }) => { 
         if (blob) formData.append(page, blob, `${page}.png`);
     });
-
+    if (audioFile) {
+        formData.append('audio', audioFile);
+    }
     try {
         const result = await axios.post(`${API_BASE_URL}/card/`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data'
             }
         });
-        console.log("response");
-        console.log(result);
         
         if (!waitingForResult) return;
         if (result.data.error != undefined)
@@ -331,8 +338,10 @@ function handleCardTypeSelected(type: CardType) {
     // Decide which footer buttons to show
     if (cardType == CardType.OneSided){
         footerButtonGroup.value!.style.display = "none";
+        showUploadAudio.value = false;
     } else if (cardType == CardType.TwoSided){
         footerInsideButton.value!.style.display = "none";
+        showUploadAudio.value = false;
     }
 
     // init the necessary cards
@@ -383,6 +392,14 @@ function handleCardTypeSelected(type: CardType) {
         })
     })
 }
+function removeFile(){
+    audioFile = null;
+    audioUploaded.value = false;
+}
+function addFile(file: File){
+    audioFile = file;
+    audioUploaded.value = true;
+}
 
 const pageSizes: { [key: string]: { width: number; height: number } } = {
     "front": { width: 1414 / 2, height: 1000 },
@@ -407,10 +424,13 @@ const insideCanvasContainer = useTemplateRef("insideCanvasContainer");
 const backCanvasContainer = useTemplateRef("backCanvasContainer");
 const footerInsideButton = useTemplateRef("inside-button");
 const footerButtonGroup = useTemplateRef("footer-buttons")
+const showUploadAudio = ref(true);
 
 var waitingForResult = false;
 var cardType: CardType;
 var hasUnsavedChanges = false;
+var audioFile: File | null = null;
+const audioUploaded = ref(false);
 
 onMounted(() => {
     window.addEventListener('beforeunload', function (e) {
@@ -441,6 +461,19 @@ onMounted(() => {
 @media (min-width: 996px) {
     .main-container {
         height: calc(100vh - 56px);
+    }
+}
+
+.btn-other {
+    background-color: #eeeeee;
+}
+
+.hide-when-small {
+    display: none;
+}
+@media (min-width: 450px) {
+    .hide-when-small {
+        display: unset;
     }
 }
 
