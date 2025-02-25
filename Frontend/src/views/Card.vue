@@ -84,31 +84,47 @@ const COOLDOWN_DURATION = 1200;
 const couldNotRetrieve = ref(false);
 const error = ref("");
 
+var audio: HTMLAudioElement | null;
+
 onMounted(async () => {
     adjustContainerSize();
     window.addEventListener('resize', adjustContainerSize);
 
-    await axios.get(`${API_BASE_URL}/card/${cardId}`).then((result) => {
+    try {
+        const result = await axios.get(`${API_BASE_URL}/card/${cardId}`);
 
+        // Store image URLs
         frontImage.value = result.data["front"];
+
+        const imageUrls = [frontImage.value];
 
         if (result.data["front_inside"] != null) {
             frontInsideImage.value = result.data["front_inside"];
             backInsideImage.value = result.data["back_inside"];
             backImage.value = result.data["back"];
+            imageUrls.push(frontInsideImage.value, backInsideImage.value, backImage.value);
+
+            if (result.data["audio"])
+                audio = new Audio(result.data["audio"]);
+
             cardType.value = CardType.Openable;
         } else if (result.data["back"] != null) {
             backImage.value = result.data["back"];
+            imageUrls.push(backImage.value);
             cardType.value = CardType.TwoSided;
         } else {
             cardType.value = CardType.OneSided;
         }
+
+        // Ensure all images are loaded
+        await Promise.all(imageUrls.map(loadImage));
+
         imagesRetrieved.value = true;
         adjustContainerSize();
-    }).catch((reason) => {
+    } catch (e) {
         couldNotRetrieve.value = true;
-        error.value = reason;
-    });
+        error.value = (e as Error).toString();
+    }
 });
 
 const leftPosition = computed(() => {
@@ -147,9 +163,11 @@ function left() {
     else if (onInside.value) {
         onFront.value = true;
         onInside.value = false;
+        stopAudio();
     } else if (onBack.value) {
         onInside.value = true;
         onBack.value = false;
+        playAudio();
     }
 }
 
@@ -162,9 +180,11 @@ function right() {
     else if (onInside.value) {
         onBack.value = true;
         onInside.value = false;
+        stopAudio();
     } else if (onFront.value) {
         onInside.value = true;
         onFront.value = false;
+        playAudio();
     }
 }
 
@@ -193,6 +213,28 @@ function imageStyle(image: String) {
     };
     return styles;
 };
+
+function loadImage(url: string) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.src = url;
+        img.onload = resolve;
+        img.onerror = reject;
+    });
+}
+
+function playAudio() {
+    if (!audio) return;
+    audio.currentTime = 0;
+    audio.play();
+}
+function stopAudio() {
+    if (!audio) return;
+    setTimeout(() => {
+        audio!.pause();
+        audio!.currentTime = 0;
+    }, 1200);
+}
 
 </script>
 
