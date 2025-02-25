@@ -50,7 +50,7 @@
         <CardModal @card-selected="handleCardTypeSelected" ref="cardModal" />
         
         <div style="position:relative">
-            <main class="main-container" ref="main-container">
+            <main class="main-container" ref="main-container" @drop="handleDrop" @dragover="handleDragOver">
                 <div ref="frontCanvasContainer"></div>
                 <div ref="insideCanvasContainer"></div>
                 <div ref="backCanvasContainer"></div>
@@ -91,6 +91,36 @@ import type { Vector2d } from 'konva/lib/types';
 import jsPDF from 'jspdf';
 import axios from 'axios';
 import { API_BASE_URL, CardType } from '@/scripts/Constants';
+
+const handleDrop = (event: DragEvent) => {
+  event.preventDefault();
+
+  const files = event.dataTransfer?.files;
+  if (files && files.length > 0) {
+    const file = files[0];
+
+    if (file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                addImage(img);
+            };
+            img.onerror = () => {
+                console.error('Error loading image');
+            };
+            img.src = e.target?.result as string;
+        };
+        reader.onerror = () => {
+            console.error('Error reading file');
+        };
+        reader.readAsDataURL(file);
+    }
+  }
+};
+const handleDragOver = (event: DragEvent) => {
+    event.preventDefault(); // Necessary to allow drop
+};
 
 function openOptionsSidebar(selectedItem: any) {
     if (sidebarSlot.value && sidebarSlot.value.hasChildNodes()) {
