@@ -151,6 +151,9 @@ function adjustContainerSize() {
     if (maxWidth / maxHeight <= aspectRatio) {
         containerWidth.value = maxWidth;
         containerHeight.value = maxWidth / aspectRatio;
+    } else {
+        containerHeight.value = maxHeight;
+        containerWidth.value = maxHeight * aspectRatio;
     }
 };
 
@@ -262,8 +265,8 @@ function stopAudio() {
 
 .postcard>div {
     position: absolute;
-    top: calc(40vh - v-bind(containerHeight/2 + 'px'));
-    left: v-bind(leftPosition);
+    top: calc(43vh - v-bind(containerHeight/2 + 'px'));
+    left: calc(50% - v-bind(containerWidth/2 + 'px'));
     backface-visibility: hidden;
 }
 footer {
