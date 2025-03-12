@@ -2,6 +2,7 @@
 import { useRoute } from 'vue-router';
 import NavigationBar from '@/components/NavigationBar.vue';
 import SlotMachineText from '@/components/SlotMachineText.vue';
+import CookieConcent from '@/components/CookieConcent.vue';
 
 const route = useRoute();
 
@@ -78,6 +79,7 @@ shuffleArray(words);
         </div>
 
     </main>
+    <CookieConcent />
 </template>
 
 <style scoped>
