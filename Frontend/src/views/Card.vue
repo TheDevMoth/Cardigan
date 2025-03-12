@@ -28,8 +28,10 @@
                 <div v-if="couldNotRetrieve">
                     <h1>{{ error }}</h1>
                 </div>
-                <div v-else>
-                    <h1>Please, wait while we retrieve your card..</h1>
+                <div v-else class="loading-container">
+                    <h1 class="my-4 mx-2">Please, wait while we retrieve your card..</h1>
+                    <br class="m-2">
+                    <img class="spinning-logo" src="/cardigan.png" alt="logo">
                 </div>
             </div>
         </div>
@@ -246,6 +248,29 @@ function stopAudio() {
     background-color: #F5F3F4;
     height: calc(100vh - 56px);
     padding-top: 10px;
+}
+
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.spinning-logo {
+    width: 80px;
+    height: 80px;
+    animation: spin 1.5s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .postcard-container {
