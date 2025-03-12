@@ -1,6 +1,6 @@
 <template>
     <div class="container d-flex flex-column">
-        <div class="search-container mb-3">
+        <div class="search-container">
             <input type="text" v-model="searchQuery" class="form-control" placeholder="Search emojis..." />
             <div class="category-filters mt-2 d-flex flex-wrap">
                 <button v-for="category in categories" :key="category" @click="selectCategory(category)"
@@ -147,6 +147,7 @@ function dismissAlert() {
 }
 
 .container {
+    margin-top: 40px;
     height: 100%;
     max-height: calc(100vh - 96px);
 }
