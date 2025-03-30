@@ -3,6 +3,18 @@ import { useRoute } from 'vue-router';
 import NavigationBar from '@/components/NavigationBar.vue';
 import SlotMachineText from '@/components/SlotMachineText.vue';
 import CookieConcent from '@/components/CookieConcent.vue';
+import { useHead } from '@vueuse/head'
+
+useHead({
+    title: 'Cardigan: Create & Share Personalized Greeting Cards',
+    meta: [
+        { name: 'description', content: 'Design unique digital greeting cards for any occasion. Easily customize with photos, messages, and more. Share the joy with friends and family!' },
+        { property: 'og:title', content: 'Cardigan: Create & Share Personalized Greeting Cards' },
+        { property: 'og:description', content: 'Design unique digital greeting cards for any occasion. Easily customize with photos, messages, and more. Share the joy with friends and family!' },
+        { property: 'og:image', content: 'https://www.cardigan.publicvm.com/cardigan.png' },
+        { property: 'og:url', content: 'https://www.cardigan.publicvm.com' }
+    ]
+})
 
 const route = useRoute();
 
@@ -73,8 +85,8 @@ shuffleArray(words);
                     bring to you a completely free* greeting card exchange service.</p>
                 <p class="tiny" style="text-align: center">*By using this website you agree to us using all your data to
                     train AGI in preparation for the great summoning.</p>
-                <p class="tiniTiny" style="text-align: center">*Also by using this website you agree to giving your soul
-                    to our lord and destroyer Cthulhu</p>
+                <!-- <p class="tiniTiny" style="text-align: center">*Also by using this website you agree to giving your soul
+                    to our lord and destroyer Cthulhu</p> -->
             </div>
         </div>
 

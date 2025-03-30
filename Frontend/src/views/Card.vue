@@ -4,9 +4,9 @@
     </header>
     <div class="background">
         <div class="postcard-container">
-            <div v-if="imagesRetrieved && cardType==CardType.Openable" class="postcard"
+            <div v-if="imagesRetrieved && cardType == CardType.Openable" class="postcard"
                 :class="{ 'on-back': onBack, 'on-inside': onInside, 'on-front': onFront }">
-                <div class="front" :style="imageStyle(frontImage)" @click="right()" 
+                <div class="front" :style="imageStyle(frontImage)" @click="right()"
                     :class="{ 'on-back': onBack, 'on-inside': onInside, 'on-front': onFront }"></div>
                 <div class="inside-right" :style="imageStyle(backInsideImage)" @click="right()"
                     :class="{ 'on-back': onBack, 'on-inside': onInside, 'on-front': onFront }"></div>
@@ -15,14 +15,14 @@
                 <div class="back" :style="imageStyle(backImage)" @click="left()"
                     :class="{ 'on-back': onBack, 'on-inside': onInside, 'on-front': onFront }"></div>
             </div>
-            <div v-else-if="imagesRetrieved && cardType==CardType.TwoSided" class="postcard">
+            <div v-else-if="imagesRetrieved && cardType == CardType.TwoSided" class="postcard">
                 <div class="front" :style="imageStyle(frontImage)" @click="flip()"
                     :class="{ 'on-back-2': onBack, 'on-front-2': onFront }"></div>
                 <div class="back" :style="imageStyle(backImage)" @click="flip()"
                     :class="{ 'on-back-2': onBack, 'on-front-2': onFront }"></div>
             </div>
-            <div v-else-if="imagesRetrieved && cardType==CardType.OneSided" class="postcard">
-                <div class="front" :style="imageStyle(frontImage)" :class="{'on-front-1': onFront }"></div>
+            <div v-else-if="imagesRetrieved && cardType == CardType.OneSided" class="postcard">
+                <div class="front" :style="imageStyle(frontImage)" :class="{ 'on-front-1': onFront }"></div>
             </div>
             <div v-else>
                 <div v-if="couldNotRetrieve">
@@ -36,7 +36,7 @@
             </div>
         </div>
         <footer>
-            <div v-if="imagesRetrieved && cardType==CardType.Openable">
+            <div v-if="imagesRetrieved && cardType == CardType.Openable">
                 <div class="btn-group" role="group">
                     <button @click="left()" class="btn btn-danger">
                         <i class="bi bi-arrow-left px-2 my-0" style="font-size: 2rem;" />
@@ -46,7 +46,7 @@
                     </button>
                 </div>
             </div>
-            <div v-if="imagesRetrieved && cardType==CardType.TwoSided">
+            <div v-if="imagesRetrieved && cardType == CardType.TwoSided">
                 <button @click="flip()" class="btn btn-danger footer-btn">
                     <i class="bi bi-phone-flip px-2 my-0" style="font-size: 2rem;" />
                 </button>
@@ -62,6 +62,18 @@ import { clamp } from '@/scripts/Utils';
 import axios from 'axios';
 import { ref, onMounted, type Ref, computed } from 'vue';
 import { useRoute } from 'vue-router';
+import { useHead } from '@vueuse/head'
+
+useHead({
+    title: 'Cardigan: Create & Share Personalized Greeting Cards',
+    meta: [
+        { name: 'description', content: 'Open to view a personalized digital card. Discover a heartfelt message and unique design created just for you.' },
+        { property: 'og:title', content: "You've received a Cardigan greeting!" },
+        { property: 'og:description', content: 'Open to view a personalized digital card. Discover a heartfelt message and unique design created just for you.' },
+        { property: 'og:image', content: 'https://www.cardigan.publicvm.com/cardigan.png' },
+        { property: 'og:url', content: 'https://www.cardigan.publicvm.com' }
+    ]
+})
 
 const route = useRoute()
 const cardId = route.params.id
@@ -130,14 +142,14 @@ onMounted(async () => {
 });
 
 const leftPosition = computed(() => {
-    const baseLeft = (cardType.value === CardType.Openable) ? 
+    const baseLeft = (cardType.value === CardType.Openable) ?
         containerWidth.value * 0.6 : containerWidth.value * 0.05;
-    
+
     if (cardType.value === CardType.Openable)
         return window.innerWidth >= 1555 ? `calc(${baseLeft}px + 50vw - 778px)` : `calc(${baseLeft}px)`;
-    else 
+    else
         return window.innerWidth >= 788 ? `calc(${baseLeft}px + 50vw - 389px)` : `calc(${baseLeft}px)`;
-        
+
 });
 
 function adjustContainerSize() {
@@ -268,6 +280,7 @@ function stopAudio() {
     from {
         transform: rotate(0deg);
     }
+
     to {
         transform: rotate(360deg);
     }
@@ -294,6 +307,7 @@ function stopAudio() {
     left: calc(50% - v-bind(containerWidth/2 + 'px'));
     backface-visibility: hidden;
 }
+
 footer {
     width: 100%;
     position: absolute;
@@ -393,12 +407,15 @@ footer .btn-group button:last-child {
 .front.on-front-2 {
     transform: rotateY(0deg) translateZ(1px);
 }
+
 .front.on-back-2 {
     transform: rotateY(-180deg) translateZ(0px);
 }
+
 .back.on-front-2 {
     transform: rotateY(180deg) translateZ(0px);
 }
+
 .back.on-back-2 {
     transform: rotateY(0deg) translateZ(1px);
 }
@@ -407,6 +424,4 @@ footer .btn-group button:last-child {
 .front.on-front-1 {
     transform: rotateY(0deg) translateZ(1px);
 }
-
-
 </style>

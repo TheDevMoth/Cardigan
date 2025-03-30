@@ -92,6 +92,19 @@ import jsPDF from 'jspdf';
 import axios from 'axios';
 import { API_BASE_URL, CardType } from '@/scripts/Constants';
 
+import { useHead } from '@vueuse/head'
+
+useHead({
+    title: 'Cardigan: Create & Share Personalized Greeting Cards',
+    meta: [
+        { name: 'description', content: 'Design unique digital greeting cards for any occasion. Easily customize with photos, messages, and more. Share the joy with friends and family!' },
+        { property: 'og:title', content: 'Cardigan: Create & Share Personalized Greeting Cards' },
+        { property: 'og:description', content: 'Design unique digital greeting cards for any occasion. Easily customize with photos, messages, and more. Share the joy with friends and family!' },
+        { property: 'og:image', content: 'https://www.cardigan.publicvm.com/cardigan.png' },
+        { property: 'og:url', content: 'https://www.cardigan.publicvm.com' }
+    ]
+})
+
 const handleDrop = (event: DragEvent) => {
   event.preventDefault();
 
