@@ -1,5 +1,6 @@
 import azure.functions as func
-from src.app import app as fastapp
+from app import app as fastapi_app
 
-# app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
-app = func.AsgiFunctionApp(app=fastapp,http_auth_level=func.AuthLevel.ANONYMOUS)
+
+app = func.AsgiFunctionApp(app=fastapi_app, http_auth_level=func.AuthLevel.ANONYMOUS, function_name="cardiganapp")
+

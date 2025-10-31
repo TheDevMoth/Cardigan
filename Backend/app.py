@@ -1,5 +1,3 @@
-import logging
-import os
 from fastapi import FastAPI, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from nanoid import generate
@@ -9,19 +7,27 @@ from typing import Optional
 
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
+from azure.data.tables import TableServiceClient
 from pydantic import BaseModel, Field
 
-# Cosmos DB Configuration
-from azure.cosmosdb.table import TableService
+STORAGE_ACCOUNT_NAME = "cardiganstorage"
+TABLE_NAME = "cardtable"
+BLOB_STORAGE = "cardimages"
 
-CONNECTION_STRING = os.environ["COSMOS_CONNECTION_STRING"]
-COSMOS_CONTAINER_NAME = "cardtable"
-ACCOUNT_URL = "https://cardiganstorage.blob.core.windows.net"
-BLOB_STORAGE = "card-storage"
+import os
+from dotenv import load_dotenv
+load_dotenv()
+CONNECTION_STRING = os.environ["STORAGE_CONNECTION_STRING"]
+if not CONNECTION_STRING:
+    raise ValueError("STORAGE_CONNECTION_STRING is not set")
+table = TableServiceClient.from_connection_string(CONNECTION_STRING)
+blob_service_client = BlobServiceClient.from_connection_string(CONNECTION_STRING)
 
-table = TableService(endpoint_suffix = "table.cosmos.azure.com", connection_string=CONNECTION_STRING)
-credential = DefaultAzureCredential()
-blob_service_client = BlobServiceClient(ACCOUNT_URL, credential=credential)
+# credential = DefaultAzureCredential()
+# table = TableServiceClient(endpoint=f"https://{STORAGE_ACCOUNT_NAME}.table.core.windows.net", credential=credential)
+# blob_service_client = BlobServiceClient(f"https://{STORAGE_ACCOUNT_NAME}.blob.core.windows.net", credential=credential)
+
+table_client = table.get_table_client(table_name=TABLE_NAME)
 card_storage = blob_service_client.get_container_client(container=BLOB_STORAGE) 
 
 
@@ -38,7 +44,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://cardiganstorage.z6.web.core.windows.net"],
+    allow_origins=["https://cardiganstorage.z1.web.core.windows.net", "https://cardigancards.art", "https://www.cardigancards.art"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -118,24 +124,25 @@ async def upload_card(
         else:
             return {"error": f"File {audio.filename} is not a valid audio file."}
 
-    table.insert_entity(COSMOS_CONTAINER_NAME, card.model_dump())
+    table_client.create_entity(card.model_dump())
 
     return {"id": id}
 
 @app.get("/card/{card_id}")
 async def read_card(card_id: str):
     try:
-        card = table.get_entity(COSMOS_CONTAINER_NAME, "card", card_id)
+        card = table_client.get_entity(partition_key="card", row_key=card_id)
+        print(card)
     except Exception as e:
-        logging.error(f"Error reading card: {e}")
         return {"error": "Card not found."}
 
     images = {
-        "front": f"{card_storage.url}/{card.RowKey}_front.png",
-        "front_inside": f"{card_storage.url}/{card.RowKey}_front_inside.png" if card.front_inside else None,
-        "back_inside": f"{card_storage.url}/{card.RowKey}_back_inside.png" if card.back_inside else None,
-        "back": f"{card_storage.url}/{card.RowKey}_back.png" if card.back else None,
-        "audio": f"{card_storage.url}/{card.RowKey}_audio.{card.audio}" if card.audio else None
+        "front": f"{card_storage.url}/{card.get('RowKey')}_front.png",
+        "front_inside": f"{card_storage.url}/{card.get('RowKey')}_front_inside.png" if card.get('front_inside') else None,
+        "back_inside": f"{card_storage.url}/{card.get('RowKey')}_back_inside.png" if card.get('back_inside') else None,
+        "back": f"{card_storage.url}/{card.get('RowKey')}_back.png" if card.get('back') else None,
+        "audio": f"{card_storage.url}/{card.get('RowKey')}_audio.{card.get('audio')}" if card.get('audio') else None
     }
 
     return images
+
