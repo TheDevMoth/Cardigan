@@ -57,7 +57,7 @@
 
 <script setup lang="ts">
 import NavigationBar from '@/components/NavigationBar.vue';
-import { API_BASE_URL, CardType } from '@/scripts/Constants';
+import { CardType } from '@/scripts/Constants';
 import { clamp } from '@/scripts/Utils';
 import axios from 'axios';
 import { ref, onMounted, type Ref, computed } from 'vue';
@@ -105,7 +105,7 @@ onMounted(async () => {
     window.addEventListener('resize', adjustContainerSize);
 
     try {
-        const result = await axios.get(`${API_BASE_URL}/card/${cardId}`);
+        const result = await axios.get(`/api/card/${cardId}`);
 
         // Store image URLs
         frontImage.value = result.data["front"];

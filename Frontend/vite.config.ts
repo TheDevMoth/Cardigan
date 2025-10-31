@@ -19,10 +19,15 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://cardiganapi.azurewebsites.net',
+        target: 'https://cardigan-api-amaugccqaxdjb8dg.switzerlandnorth-01.azurewebsites.net',
         changeOrigin: true,
+        secure: true,
+        // keep /api prefix on client, strip it for backend
         rewrite: (path) => path.replace(/^\/api/, '')
       }
     }
+  },
+  test: {
+    environment: 'happy-dom',
   }
 })

@@ -12,7 +12,7 @@
                     File size is limited to 2 MB.
                 </p>
                 <input type="file" ref="audioInput" @change="handleAudioUpload" accept="audio/*" />
-                <button v-if="audioUploaded" type="button" class="btn-close" @click="removeFile"></button>
+                <button v-if="audioUploaded" type="button" class="btn-close" id="remove-file" @click="removeFile"></button>
             </div>
         </div>
     </div>
@@ -45,6 +45,10 @@ function handleAudioUpload(event: Event) {
     // Check file size
     if (file.size > maxSize) {
         alert('Audio file must be less than 2MB');
+        input.value = '';
+        return;
+    } else if (file.type !== 'audio/mpeg' && file.type !== 'audio/wav' && file.type !== 'audio/mp3') {
+        alert('Invalid audio format. Please upload an mp3, wav, or mpeg file.');
         input.value = '';
         return;
     }

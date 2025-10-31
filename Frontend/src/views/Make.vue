@@ -90,7 +90,7 @@ import Konva from 'konva';
 import type { Vector2d } from 'konva/lib/types';
 import jsPDF from 'jspdf';
 import axios from 'axios';
-import { API_BASE_URL, CardType } from '@/scripts/Constants';
+import { CardType } from '@/scripts/Constants';
 
 import { useHead } from '@vueuse/head'
 
@@ -278,7 +278,7 @@ async function shareCard() {
         formData.append('audio', audioFile);
     }
     try {
-        const result = await axios.post(`${API_BASE_URL}/card/`, formData, {
+        const result = await axios.post(`/api/card`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data'
             }

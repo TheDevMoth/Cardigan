@@ -27,7 +27,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, onMounted, watch } from 'vue';
+import { ref, nextTick, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 
 const route = useRoute();
@@ -49,8 +49,10 @@ const checkLayout = () => {
         endWidth = end.value!.offsetWidth;
         const containerWidth = container.value.offsetWidth;
         const totalContentWidth = startWidth + middleWidth + endWidth + 50;
+        // switch to stacked layout if the total content width exceeds the width of the viewport
         container.value.classList.toggle('stacked-layout', totalContentWidth > containerWidth);
         
+        // Hide nav shortcuts if the end slot is filled and the layout is stacked
         const stackedContentWidth = startWidth + endWidth + 30;
         isExtraSmallAndEndFilled.value = endSlotFilled.value && stackedContentWidth > containerWidth;
     });
